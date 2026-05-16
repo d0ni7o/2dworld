@@ -6,13 +6,18 @@
     <div id="images" style="display: none;"></div>
 </body>
 <script src="./game/utils.js"></script>
+<script src="./game/ajax.js"></script>
 <script src="./game/asset-manager.js"></script>
+<script src="./game/animation.js"></script>
 <script src="./game/geometry.js"></script>
+<script src="./game/marching-squares.js"></script>
 <script src="./game/physics.js"></script>
 <script src="./game/entities.js"></script>
 <script src="./game/skeleton.js"></script>
-<script src="./game/items.js"></script>
 <script src="./game/attacks.js"></script>
+<script src="./game/items.js"></script>
+<script src="./game/character.js"></script>
+<script src="./game/water.js"></script>
 <script src="./game/screen.js"></script>
 <script src="./game/tilemap.js"></script>
 <script src="./game/room.js"></script>
@@ -36,10 +41,22 @@
             if (entityBox.doorCooldown < 1) return;
             entityBox.doorCooldown = 0;
             entityBox.room.entityBoxes = entityBox.room.entityBoxes.filter(({ id }) => id != entityBox.id);
-            entityBox.room = this.otherDoor.room;
-            entityBox.room.entityBoxes.push(entityBox);
-            entityBox.x = this.otherDoor.x + entityBox.x - this.x;
-            entityBox.y = this.otherDoor.y + entityBox.y - this.y;
+            if (entityBox.root?.skeleton?.character) {
+                entityBox.room.characters = entityBox.room.characters.filter(({ id }) => id != entityBox.root.skeleton.character.id);
+                this.otherDoor.room.addGeometry('character', entityBox.root.skeleton.character, true);
+                entityBox.root.skeleton.Controller.x = this.otherDoor.x + entityBox.root.skeleton.Controller.x - this.x;
+                entityBox.root.skeleton.Controller.y = this.otherDoor.y + entityBox.root.skeleton.Controller.y - this.y;
+                entityBox.root.skeleton.Controller.updateGeometry();
+            } else {
+                this.otherDoor.room.addGeometry('entityBox', entityBox, true);
+                entityBox.x = this.otherDoor.x + entityBox.x - this.x;
+                entityBox.y = this.otherDoor.y + entityBox.y - this.y;
+                entityBox.updateGeometry();
+            };
+            // entityBox.room = this.otherDoor.room;
+            // entityBox.room.entityBoxes.push(entityBox);
+            // entityBox.x = this.otherDoor.x + entityBox.x - this.x;
+            // entityBox.y = this.otherDoor.y + entityBox.y - this.y;
             // entityBox.updateGeometry();
         };
     };
@@ -49,34 +66,40 @@
             super(x, y, width, height, 0);
 
             this.open = false;
-            this.openSpeed = 10;
+            this.openSpeed = 100;
 
             this.offsetY = 0;
 
-            this.interactionCooldown = 0;
-            this.interactedIds = [];
+            // this.interactionCooldown = 0;
+            // this.interactedIds = [];
         };
 
         updateGeometry() {
             super.updateGeometry();
 
-            this.minOffsetY = -this.height / 2;
+            this.minOffsetY = -this.height;
             this.maxOffsetY = 0;
         };
 
         updatePos(dt) {
             super.updatePos(dt);
-            this.interactionCooldown += dt;
-            if (this.interactionCooldown > 5) {
-                this.interactedIds = [];
-            };
+            // this.interactionCooldown += dt;
+            // if (this.interactionCooldown > 5) {
+            //     this.interactedIds = [];
+            // };
 
             const oldOffsetY = this.offsetY;
 
             if (this.open) {
                 this.offsetY = Math.max(this.minOffsetY, this.offsetY - dt * this.openSpeed);
+                if (this.offsetY == this.minOffsetY) {
+                    this.moving = false;
+                };
             } else {
                 this.offsetY = Math.min(this.maxOffsetY, this.offsetY + dt * this.openSpeed);
+                if (this.offsetY == this.maxOffsetY) {
+                    this.moving = false;
+                };
             };
 
             if (oldOffsetY) this.y = this.ogY + this.offsetY;
@@ -84,11 +107,12 @@
 
         onCollision(dt, entityBox) {
             Physics.checkEntityBoxBox(dt, entityBox, this);
-            if (!entityBox.interact || this.interactedIds.some(id => entityBox.id == id)) return;
+            if (!entityBox.interact || this.moving) return;
+            this.moving = true;
             this.open = !this.open;
             if (this.open) this.ogY = this.y;
-            this.interactionCooldown = 0;
-            this.interactedIds.push(entityBox.id);
+            // this.interactionCooldown = 0;
+            // this.interactedIds.push(entityBox.id);
         };
     };
 
@@ -124,14 +148,13 @@
                     // new Vector(Screen.main.width / 8, Screen.main.height / 8, Screen.main.width / 2, Screen.main.height / 2),
                 ],
                 [
-                    TestSkeleton.bones[0],
-                    new EntityBox(0, -40, 13 * 4, 18 * 4, 0, 'blue'),
+                    // new EntityBox(0, -40, 13 * 4, 18 * 4, 0, 'blue'),
                     // new EntityBox(20, -40, 40, 80, 0, 'blue')
                 ],
                 [
-                    // doors[0],
-                    // doors[6],
-                    // new Gate(0, Screen.main.height / 8, 50, 100)
+                    doors[0],
+                    doors[6],
+                    new Gate(0, Screen.main.height / 8, 50, 100)
                 ]
             ),
             new Room(
@@ -140,11 +163,8 @@
                 Screen.main.width / 2,
                 Screen.main.height / 2,
                 [
-                    new Box(Screen.main.width / 8, 0, Screen.main.width / 4, Screen.main.height / 4),
                 ],
                 [
-                    new Vector(-Screen.main.width / 4, -Screen.main.height / 4, Screen.main.width / 8, Screen.main.height / 8),
-                    // new Vector(Screen.main.width / 8, Screen.main.height / 8, Screen.main.width / 2, -Screen.main.height / 2),
                 ],
                 [],
                 [
@@ -158,11 +178,8 @@
                 Screen.main.width / 2,
                 Screen.main.height / 2,
                 [
-                    new Box(-Screen.main.width / 8, 0, Screen.main.width / 4, Screen.main.height / 4),
                 ],
                 [
-                    new Vector(-Screen.main.width / 4, Screen.main.height / 4, Screen.main.width / 8, Screen.main.height / 8),
-                    // new Vector(Screen.main.width / 8, Screen.main.height / 8, Screen.main.width / 2, Screen.main.height / 2),
                 ],
                 [
                 ],
@@ -177,11 +194,8 @@
                 Screen.main.width / 2,
                 Screen.main.height / 2,
                 [
-                    new Box(-Screen.main.width / 8, 0, Screen.main.width / 4, Screen.main.height / 4),
                 ],
                 [
-                    new Vector(-Screen.main.width / 4, Screen.main.height / 4, Screen.main.width / 8, Screen.main.height / 8),
-                    // new Vector(Screen.main.width / 8, Screen.main.height / 8, Screen.main.width / 2, Screen.main.height / 2),
                 ],
                 [
                 ],
@@ -199,19 +213,48 @@
         initialize() { },
     };
 
-    Player.entityBox = World.rooms[0].entityBoxes[0];
+    let Sword;
+    let Sword2;
+    let Mask;
+    let Shirt;
+    let Helm;
+    let Gloves;
 
-    const Sword = spawnItem('Sword', 100, 100);
-    const Sword2 = spawnItem('Sword', 150, 100);
-    const Mask = spawnItem('Mask', 200, 100);
-    const Shirt = spawnItem('Shirt', 250, 100);
-    const Helm = spawnItem('Helm', 300, 100);
-    const Gloves = spawnItem('Gloves', 350, 100);
+    let TestSkeleton;
 
     let tileChange = 0;
+    let itemsSpawned = false;
+
+    let HumanInventory;
+    let timeScale = 1;
     const Game = {
         update(dt = 0) {
             if (loading > 0) return;
+            if (!itemsSpawned) {
+                itemsSpawned = true;
+                HumanInventory = new HumanInventorySkeleton(0, 0, 10);
+
+                PlayerCharacter = new Human(100, 100, 4);
+                Player.entityBox = PlayerCharacter.skeleton.Controller;
+
+                World.rooms[0].addGeometry('character', PlayerCharacter);
+                World.rooms[0].addGeometry('character', new Human(200, 100, 1));
+                World.rooms[0].addGeometry('character', new Human(400, 100, 2));
+                World.rooms[0].addGeometry('character', new Human(600, 100, 3));
+
+                for (let i = 0; i < 2; i++) {
+                    spawnItem('Sword', 100, 100);
+                    spawnItem('Sword', 150, 100);
+                    spawnItem('Sword', 400, 100);
+                    spawnItem('Mask', 200, 100);
+                    spawnItem('Shirt', 250, 100);
+                    spawnItem('Helm', 300, 100);
+                    spawnItem('Gloves', 350, 100);
+                };
+
+                World.rooms[0].addGeometry('character', new Chest(500, 100, 4));
+                spawnItem('Chest', 500, 100);
+            }
             // tileChange += dt;
             // if (tileChange >= 1) {
             //     tileChange = 0;
@@ -223,9 +266,25 @@
 
             if (!pausePhysics) handleInput();
 
-            World.update(dt);
+            World.update(dt * timeScale);
 
             Player.entityBox.room.render();
+            if (Keys.renderInventory) Screen.renderInventory(Player.entityBox.skeleton.character);
+            if (ITEM_INVENTORY.render) {
+                if (Math.pow(ITEM_INVENTORY.target.x - Player.entityBox.x, 2) + Math.pow(ITEM_INVENTORY.target.y - Player.entityBox.y, 2) >= Math.pow(ITEM_INVENTORY.range, 2)) {
+                    ITEM_INVENTORY.close();
+                } else {
+                    Screen.renderItemInventory();
+                };
+            };
+            if (CONTEXT_MENU.render) {
+                if (Math.pow(CONTEXT_MENU.target.x - Player.entityBox.x, 2) + Math.pow(CONTEXT_MENU.target.y - Player.entityBox.y, 2) >= Math.pow(CONTEXT_MENU.range, 2)) {
+                    CONTEXT_MENU.render = false;
+                } else {
+                    Screen.renderContextMenu();
+                };
+            };
+
 
 
             // for (let i = 0; i < TileSets.Grass.images?.length; i++) {

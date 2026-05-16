@@ -2,6 +2,9 @@
 let loading = 0;
 const getId = () => Math.floor(Math.random() * (999999 - 100000)) + 100000;
 const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+const startLoading = (name) => { console.log(`START LOADING ${name}`); loading++ };
+const stopLoading = (name) => { console.log(`STOP LOADING ${name}`); loading-- };
+const randomEl = (array) => array[Math.floor(Math.random() * array.length)];
 
 
 const spawnCircle = function (x, y, radius = minCircleSize + Math.floor(Math.random() * maxCircleSize)) {

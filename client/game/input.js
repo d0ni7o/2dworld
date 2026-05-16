@@ -14,6 +14,7 @@ let lastEventButton = -1;
 document.addEventListener('contextmenu', event => event.preventDefault());
 let TileUpdates = {};
 const handleTileInput = function (event) {
+    if (Keys.renderInventory || ITEM_INVENTORY.render || CONTEXT_MENU.render) return;
     const x = clamp(
         event.clientX,
         Player.entityBox.room.x - Player.entityBox.room.width / 2,
@@ -29,9 +30,11 @@ const handleTileInput = function (event) {
     // Player.entityBox.y = y;
     // Player.entityBox.updateGeometry();
 
-    const tileX = Math.floor((x) / tileSize);
-    const tileY = Math.floor((y) / tileSize);
-    if (TileUpdates[`${tileX}-${tileY}`]) return;
+    const tileX = Math.floor((x - Player.entityBox.room.x + Player.entityBox.room.width / 2) / tileSize);
+    const tileY = Math.floor((y - Player.entityBox.room.y + Player.entityBox.room.height / 2) / tileSize);
+
+    // console.log({ tileX, tileY, x, y });
+    if (TileUpdates[`${tileX}-${tileY}`] && lastEventButton != 1) return;
     let tile;
     try {
         tile = Player.entityBox.room.TileMap.map[tileX][tileY];
@@ -43,8 +46,10 @@ const handleTileInput = function (event) {
         tile.image = null;
         tile.imageIndex = -1;
         tile.updateCollider();
-    } else {
+    } else if (lastEventButton == 0) {
         tile.setType(TileSets.Grass);
+    } else {
+        tile.waterInstance.addWater(1);
     };
 
     Player.entityBox.room.TileMap.optimizeColliders();
@@ -55,35 +60,16 @@ window.addEventListener('mousedown', function (event) {
     mousedown = true;
 
     const dx = event.clientX - Player.entityBox.x;
-
-    if (event.button == 0) {
-        if (Sword.attached && Sword.parent.root.id == Player.entityBox.id) {
-            if (Player.entityBox.attacks.some(attack => attack.constructor.name == 'SwordAttack')) return;
-            Player.entityBox.attacks.push(
-                new SwordAttack(Sword, dx)
-            );
+    const attackWeapons = Player.entityBox.getChildren((bone) => {
+        if (bone.weaponAttacks) {
+            return true;
         };
+    });
+    for (const weapon of attackWeapons) {
+        if (Player.entityBox.attacks.some(attack => attack.Owner.id == weapon.id)) continue;//attack.constructor.name == weapon.weaponAttacks[0].name)) continue;
+        Player.entityBox.attacks.push(new weapon.weaponAttacks[0](weapon, dx));
+        break;
     };
-
-    if (event.button == 2) {
-        if (Sword2.attached && Sword2.parent.root.id == Player.entityBox.id) {
-            if (Player.entityBox.attacks.some(attack => attack.constructor.name == 'SwordAttack')) return;
-            Player.entityBox.attacks.push(
-                new SwordAttack(Sword2, dx)
-            );
-        };
-    };
-    // if (Math.random() < 0.5) {
-    //     if (Player.entityBox.attacks.some(attack => attack.constructor.name == 'Thrust1')) return;
-    //     Player.entityBox.attacks.push(
-    //         new Thrust1(Player.entityBox, dx)
-    //     );
-    // } else {
-    //     if (Player.entityBox.attacks.some(attack => attack.constructor.name == 'Swing1')) return;
-    //     Player.entityBox.attacks.push(
-    //         new Swing1(Player.entityBox, dx)
-    //     );
-    // };
 
     Mouse.x = event.clientX;
     Mouse.y = event.clientY;
@@ -99,6 +85,8 @@ window.addEventListener('mouseup', function (event) {
     Mouse.y = event.clientY;
 
     TileUpdates = {};
+
+    HumanInventory.handleInventoryInput();
     // Player.entityBox.x = event.clientX; Player.entityBox.y = event.clientY;
     // spawnCircle(event.clientX, event.clientY, minCircleSize);
 });
@@ -107,6 +95,18 @@ window.addEventListener('mousemove', function (event) {
     Mouse.y = event.clientY;
 
     if (!mousedown) return;
+
+    const dx = event.clientX - Player.entityBox.x;
+    // const attackWeapons = Player.entityBox.getChildren((bone) => {
+    //     if (bone.weaponAttacks) {
+    //         return true;
+    //     };
+    // });
+    // for (const weapon of attackWeapons) {
+    //     if (Player.entityBox.attacks.some(attack => attack.Owner.id == weapon.id)) continue;//attack.constructor.name == weapon.weaponAttacks[0].name)) continue;
+    //     Player.entityBox.attacks.push(new weapon.weaponAttacks[0](weapon, dx));
+    //     break;
+    // };
 
     handleTileInput(event);
 
@@ -137,6 +137,9 @@ window.addEventListener('keyup', function (event) {
 
     if (event.code == 'Space') pausePhysics = !pausePhysics;
     if (event.code == 'ShiftLeft') World.rooms[0].circles = [];
+    if (event.code == 'KeyI') {
+        Keys.renderInventory = !Keys.renderInventory;
+    };
 });
 
 const inputForce = 300;
@@ -152,9 +155,21 @@ const handleInput = function () {
         Player.entityBox.dx -= inputForce;
         Player.entityBox.flipX = true;
     };
-    if (Keys.KeyW && Player.entityBox.Floor.collision) {
-        Player.entityBox.dy -= jumpForce;
-        Player.entityBox.jumping = true;
+    if (Keys.KeyW) {
+        if (Player.entityBox.Floor.collision && !Player.entityBox.Ceiling.collision) {
+            Player.entityBox.dy -= jumpForce;
+            Player.entityBox.jumping = true;
+        };
+        if (Player.entityBox.waterCollision) {
+            Player.entityBox.dy -= jumpForce / 25;
+            // Player.entityBox.jumping = true;
+        };
+    };
+    if (Keys.KeyS) {
+        if (Player.entityBox.waterCollision) {
+            Player.entityBox.dy += jumpForce / 25;
+            // Player.entityBox.jumping = true;
+        };
     };
     if (Keys.ShiftLeft) {
         if (!Player.entityBox.crouch) {

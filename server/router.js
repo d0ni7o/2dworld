@@ -5,10 +5,12 @@ const FileSystemController = require('./file-system-controller.js');
 
 const Router = {
     route: function (Req, Res) {
+        if (this.routeMatch('GET', `^\/readFolderContents*`, FileSystemController, 'readFolderContents', Req, Res)) { return };
         if (this.routeMatch('GET', `.${files}$`, FileSystemController, 'serve', Req, Res)) { return };
 
         //NO ROUTE MATCH
-        Res.end(`No routes matched ${Req.method} ${Req.url}`);
+        FileSystemController.serve({ ...Req, url: '/index.html' }, Res);
+        // Res.end(/*`No routes matched ${Req.method} ${Req.url}`*/);
 
         // console.log(`ROUTER '${Req.method}' ${Req.url} NO MATCH`);
     },

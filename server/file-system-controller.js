@@ -35,5 +35,18 @@ module.exports = {
             Res.write(fileData);
             Res.end();
         });
+    },
+    readFolderContents: function (Req, Res) {
+        const path = `.${Req.url.replace('/readFolderContents', '/client')}`;
+        console.log({ path });
+        fs.readdir(path, 'utf-8', async (error, files) => {
+            Res.writeHead(200, { 'Content-Type': MIMES.json });
+            if (error) {
+                Res.write(JSON.stringify([]));
+            } else {
+                Res.write(JSON.stringify(files));
+            };
+            Res.end();
+        });
     }
 }

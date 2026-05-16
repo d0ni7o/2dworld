@@ -1,3 +1,4 @@
+let rendered = false;
 
 class Room {
     constructor(
@@ -15,7 +16,10 @@ class Room {
         this.width = width;
         this.height = height;
 
+        this.totalDt = 0;
+
         new TileMap(this);
+        this.water = new Water(this);
 
         this.circles = [];
         this.boxes = boxes;
@@ -23,33 +27,34 @@ class Room {
         this.points = [];
         this.ramps = [
             /* ROOM BORDERS */
+            // new Vector(
+            //     -this.width / 2,
+            //     -this.height / 2,
+            //     this.TileMap.maxX,
+            //     -this.height / 2
+            // ),
             new Vector(
-                -this.width / 2,
+                this.TileMap.maxX,
                 -this.height / 2,
-                (this.TileMap.map.length - 1) * (tileSize + 1 / 2) / 2,
-                -this.height / 2
+                this.TileMap.maxX,
+                this.TileMap.maxY,
             ),
             new Vector(
-                (this.TileMap.map.length - 1) * (tileSize + 1 / 2) / 2,
-                -this.height / 2,
-                (this.TileMap.map.length - 1) * (tileSize + 1 / 2) / 2,
-                (this.TileMap.map[0].length - 1) * (tileSize + 1) / 2,
-            ),
-            new Vector(
-                (this.TileMap.map.length - 1) * (tileSize + 1 / 2) / 2,
-                (this.TileMap.map[0].length - 1) * (tileSize + 1) / 2,
+                this.TileMap.maxX,
+                this.TileMap.maxY,
                 -this.width / 2,
-                (this.TileMap.map[0].length - 1) * (tileSize + 1) / 2,
+                this.TileMap.maxY,
             ),
             new Vector(
                 -this.width / 2,
-                (this.TileMap.map[0].length - 1) * (tileSize + 1) / 2,
+                this.TileMap.maxY,
                 -this.width / 2,
                 -this.height / 2,
             ),
             ...ramps
             /**/
         ];
+        this.characters = [];
         this.entityBoxes = entityBoxes;
         this.hitBoxes = [];
         this.doors = doors;
@@ -82,6 +87,55 @@ class Room {
             this.doors[i].x += this.x;
             this.doors[i].y += this.y;
             this.doors[i].updateGeometry();
+        };
+    };
+
+    addGeometry(type, geometry, skipTranslation) {
+        switch (type) {
+            case 'circle':
+                this.circles.push(geometry);
+                break;
+            case 'box':
+                this.boxes.push(geometry);
+                break;
+            case 'ramp':
+                this.ramps.push(geometry);
+                break;
+            case 'character':
+                this.characters.push(geometry);
+                this.entityBoxes.push(geometry.skeleton.Controller);
+                break;
+            case 'entityBox':
+                this.entityBoxes.push(geometry);
+                break;
+            case 'door':
+                this.doors.push(geometry);
+                break;
+        };
+
+        switch (type) {
+            case 'ramp':
+                geometry.room = this;
+                if (skipTranslation) return;
+                geometry.p0.x += this.x - this.width / 2;
+                geometry.p0.y += this.y - this.height / 2;
+                geometry.p.x += this.x - this.width / 2;
+                geometry.p.y += this.y - this.height / 2;
+                break;
+            case 'character':
+                geometry.skeleton.Controller.room = this;
+                if (skipTranslation) return;
+                geometry.skeleton.Controller.x += this.x - this.width / 2;
+                geometry.skeleton.Controller.y += this.y - this.height / 2;
+                geometry.skeleton.Controller.updateGeometry();
+                break;
+            default:
+                geometry.room = this;
+                if (skipTranslation) return;
+                geometry.x += this.x - this.width / 2;
+                geometry.y += this.y - this.height / 2;
+                geometry.updateGeometry();
+                break;
         };
     };
 
@@ -120,7 +174,7 @@ class Room {
                 this.gravity(entityBox);
 
                 if (entityBox.animate) {
-                    if(entityBox.Ceiling.collision) entityBox.jumping = false;
+                    if (entityBox.Ceiling.collision) entityBox.jumping = false;
                     entityBox.animate(dt);
                 };
 
@@ -128,7 +182,7 @@ class Room {
 
                 entityBox.resetCollisions();
             };
-            const passes = 5;
+            const passes = 1;
             for (let p = 0; p < passes; p++) {
                 for (let i = 0; i < this.circles.length; i++) {
                     if (!p) this.circles[i].updatePos(dt);
@@ -179,11 +233,17 @@ class Room {
                         // Physics.checkEntityBoxEntityBox(dt, this.entityBoxes[i], this.entityBoxes[j]);
 
                         if (Physics.checkBoxBox(this.entityBoxes[i], this.entityBoxes[j])) {
+                            if (this.entityBoxes[i].interact && this.entityBoxes[j].interactable) {
+                                this.entityBoxes[j].interactable(this.entityBoxes[i]);
+                                continue;
+                            } else if (this.entityBoxes[j].interact && this.entityBoxes[i].interactable) {
+                                this.entityBoxes[i].interactable(this.entityBoxes[j]);
+                                continue;
+                            };
+
                             if (this.entityBoxes[i].interact && this.entityBoxes[j].attach) {
                                 this.entityBoxes[j].attach(this.entityBoxes[i].skeleton);
-                                return;
-                            };
-                            if (this.entityBoxes[j].interact && this.entityBoxes[i].attach) {
+                            } else if (this.entityBoxes[j].interact && this.entityBoxes[i].attach) {
                                 this.entityBoxes[i].attach(this.entityBoxes[j].skeleton);
                             };
                         };
@@ -192,11 +252,78 @@ class Room {
                 for (let i = 0; i < this.entityBoxes.length; i++) {
                     for (let j = 0; j < this.hitBoxes.length; j++) {
                         if (Physics.checkBoxBox(this.entityBoxes[i], this.hitBoxes[j])) {
-                            this.hitBoxes[j].registerHit(this.entityBoxes[i]);
+                            this.hitBoxes[j].registerHit(dt, this.entityBoxes[i]);
+                        };
+                    };
+
+                    Physics.checkRoomOOB(this, this.entityBoxes[i]);
+                };
+            };
+
+            this.water.instances = this.water.instances.sort((a, b) => a.amount - b.amount);
+            for (let i = 0; i < this.water.instances.length; i++) {
+                if (!this.water.instances[i].amount) continue;
+                this.water.instances[i].flow(dt);
+                if (!this.water.instances[i].amount) continue;
+                if (!this.water.instances[i]) continue;
+                for (let j = 0; j < this.entityBoxes.length; j++) {
+                    if (!this.water.instances[i].amount) continue;
+                    if (Physics.checkBoxBox(this.entityBoxes[j], this.water.instances[i].getCollider())) {
+                        const dx = this.entityBoxes[j].x - this.entityBoxes[j].lastX;
+                        const dy = this.entityBoxes[j].y - this.entityBoxes[j].lastY;
+
+                        const waterDy = this.entityBoxes[j].y - this.water.instances[i].tile.y * tileSize;
+
+                        this.entityBoxes[j].x += this.water.instances[i].dx * this.water.instances[i].amount * dt * 11;
+                        this.entityBoxes[j].y += this.water.instances[i].dy * this.water.instances[i].amount * dt * 11;
+                        this.entityBoxes[j].lastX = this.entityBoxes[j].x;
+                        this.entityBoxes[j].lastY = this.entityBoxes[j].y;
+
+
+                        if (this.entityBoxes[j].waterCollision) continue;
+                        this.entityBoxes[j].waterCollision = true;
+                        this.entityBoxes[j].ddy -= 1.1 * (this.gForce || gForce) * (Math.min(MAX_WATER_PER_TILE - 1, this.water.instances[i].amount)) / (MAX_WATER_PER_TILE - 1);
+                        if (dy > dt * 600) {
+                            this.water.instances[i].splash(dx, dy / (dt * 600));
                         };
                     };
                 };
             };
+
+            this.totalDt += dt;
+            if (this.totalDt > FLOW_TICK_S * 2 && !Player.stopTestWater) {
+                this.totalDt = 0;
+                this.water.addWaterInstance(
+                    this.TileMap.map[
+                    Math.floor(Math.random() * this.TileMap.map.length)
+                    ][
+                    Math.floor(0)
+                    ]
+                );
+                // this.water.addWaterInstance(
+                //     this.TileMap.map[
+                //     Math.floor((this.TileMap.map.length - 1) / 2)
+                //     ][
+                //     Math.floor((this.TileMap.map[0].length - 1 - 2))
+                //     ]
+                // );
+                // this.water.addWaterInstance(
+                //     this.TileMap.map[
+                //     -1 + Math.floor((this.TileMap.map.length) / 2)
+                //     ][
+                //     Math.floor((this.TileMap.map[0].length - 1 - 2))
+                //     ]
+                // );
+                // this.water.addWaterInstance(
+                //     this.TileMap.map[
+                //     1 + Math.floor((this.TileMap.map.length) / 2)
+                //     ][
+                //     Math.floor((this.TileMap.map[0].length - 1 - 2))
+                //     ]
+                // );
+            };
+            this.TileMap.map[0][this.TileMap.map[0].length - 1].waterInstance.amount = Math.max(0, this.TileMap.map[0][this.TileMap.map[0].length - 1].waterInstance.amount - 7);
+            this.TileMap.map[this.TileMap.map.length - 1][this.TileMap.map[0].length - 1].waterInstance.amount = Math.max(0, this.TileMap.map[this.TileMap.map.length - 1][this.TileMap.map[0].length - 1].waterInstance.amount - 7);
 
             /** ANIMATE ? */
             // for (const entityBox of this.entityBoxes) {
@@ -206,6 +333,10 @@ class Room {
     };
 
     render() {
+        if (!rendered) {
+            console.log(`FIRST RENDER`);
+            rendered = true;
+        };
         Screen.ctx.clearRect(0, 0, Screen.main.width, Screen.main.height);
 
         Screen.renderTileMap(this.TileMap);
@@ -220,19 +351,21 @@ class Room {
         for (const ramp of this.ramps) {
             Screen.renderRay(ramp);
         };
-        for (const ray of this.rays) {
-            Screen.renderRay(ray);
-        };
         for (const entityBox of this.entityBoxes) {
             Screen.renderEntityBox(entityBox);
         };
         for (const hitbox of this.hitBoxes) {
             Screen.renderBox(hitbox);
         };
-        TestSkeleton.bones[0].updateGeometry();
-        Screen.renderSkeleton(TestSkeleton);
         for (const door of this.doors) {
             Screen.renderBox(door);
+        };
+        for (const character of this.characters) {
+            Screen.renderSkeleton(character.skeleton);
+        };
+        Screen.renderWater(this.water);
+        for (const ray of this.rays) {
+            Screen.renderRay(ray);
         };
         for (const point of this.points) {
             Screen.renderCircle({ color: 'red', radius: 10, ...point });

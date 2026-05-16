@@ -59,7 +59,9 @@ class Tile {
         let neighbour;
         try {
             neighbour = this.TileMap.map[this.x + offsetX][this.y + offsetY];
-        } catch (error) { };
+        } catch (error) {
+            return null;
+        };
         return neighbour;
     };
 
@@ -111,6 +113,50 @@ class Tile {
         this.tileSet = tileSet;
         this.image = tileSet.images[imageIndex];
         this.imageIndex = imageIndex;
+
+        switch(this.imageIndex) {
+            case 2:
+                this.GhostCollider =  {
+                    right: true,
+                    bottom: true
+                };
+                break;
+            case 3:
+                this.GhostCollider =  {
+                    left: true,
+                    top: true
+                };
+                break;
+            case 4:
+                this.GhostCollider =  {
+                    left: true,
+                    bottom: true
+                };
+                break;
+            case 5:
+                this.GhostCollider =  {
+                    right: true,
+                    top: true
+                };
+                break;
+            case 0:
+            case 1:
+                this.GhostCollider = {
+                    left: true,
+                    bottom: true,
+                    right: true,
+                    top: true,
+                };
+                break;
+            default:
+                this.GhostCollider = {
+                    // left: true,
+                    // bottom: true,
+                    // right: true,
+                    // top: true,
+                };
+                break;
+        };
 
 
         if (nBottom?.image) {
@@ -224,6 +270,22 @@ class TileMap {
 
         this.room = room;
         this.room.TileMap = this;
+
+        this.width = tilesX * tileSize;
+        this.height = tilesY * tileSize;
+
+        this.maxX = this.width - this.room.width / 2;
+        this.maxY = this.height - this.room.height / 2;
+    };
+
+    getTile(x, y) {
+        let tile;
+        try {
+            tile = this.map[x][y];
+        } catch (error) {
+            return null;
+        };
+        return tile;
     };
 
     optimizeColliders() {

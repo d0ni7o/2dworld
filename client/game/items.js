@@ -1,9 +1,11 @@
-
-
-const scale = 4;
 class Attachment extends EntityBox {
-    constructor(name, animationSet, init) {
+    constructor(scale, name, animationSet, init) {
         super(init.x || 0, init.y || 0, init.width * scale, init.height * scale, init.rotation || 0, init.color || 'blue');
+
+        this.init = init;
+
+        this.scale = scale;
+        this.ogScale = scale;
 
         this.attached = false;
 
@@ -11,7 +13,8 @@ class Attachment extends EntityBox {
         this.animationT = 0;
 
         this.name = name;
-        this.animationSet = animationSet;
+        this.animator = new Animator(animationSet, this);
+
         this.isBone = true;
 
         this.attachments = [];
@@ -22,6 +25,12 @@ class Attachment extends EntityBox {
         this.rotationOffsetY = init.rotationOffsetY || 0;
 
         this.attachmentOrder = init.attachmentOrder || 0;
+
+        this.weaponAttacks = init.weaponAttacks;
+
+        if (init.interactable) {
+            this.interactable = init.interactable.bind(this);
+        };
     };
 
     setParent(parent) {
@@ -35,30 +44,53 @@ class Attachment extends EntityBox {
         this.childY = parent.childY;
 
         this.parent.attachments.push(this);
+        this.parent.attachments = this.parent.attachments.sort((a, b) => {
+            return b.attachmentDef.slots[0] - a.attachmentDef.slots[0];
+        });
 
         this.parent.root.room.entityBoxes = this.parent.root.room.entityBoxes.filter(({ id }) => this.id != id);
     };
 
-    attach(skeleton) {
+    attach(skeleton, targetBoneId) {
         const skeletonName = skeleton.constructor.name;
-        const itemDef = ITEM[this.name];
-        
-        for (const attachmentDef of itemDef.init.attachment[skeletonName]) {
-            const bone = skeleton[attachmentDef.bone];
-            const occupied = bone.slots.some(slot => attachmentDef.slots.includes(slot));
-            if(!occupied) {
-                this.setParent({
-                    bone,
-                    parentX: attachmentDef.parentX || 0,
-                    parentY: attachmentDef.parentY || 0,
-                    childX: attachmentDef.childX,
-                    childY: attachmentDef.childY,
-                });
-                this.attachmentOrder = attachmentDef.attachmentOrder || 0;
-                bone.slots.push(...attachmentDef.slots);
-                return;
+        skeleton.bones[0].unRotate();
+        this.unRotate();
+
+        // console.log(`ATTACH`, this, targetBoneId);
+
+        if (ITEM[this.name].init.attachment) {
+            for (const attachmentDef of ITEM[this.name].init.attachment[skeletonName] || []) {
+                const bone = skeleton[attachmentDef.bone];
+                if (targetBoneId && bone.id != targetBoneId) continue;
+                const occupied = bone.slots.some(slot => attachmentDef.slots.includes(slot));
+                if (!occupied) {
+                    this.attachmentOrder = attachmentDef.attachmentOrder || 0;
+                    bone.slots.push(...attachmentDef.slots);
+                    this.attachmentDef = attachmentDef;
+                    this.setParent({
+                        bone,
+                        parentX: attachmentDef.parentX || 0,
+                        parentY: attachmentDef.parentY || 0,
+                        childX: attachmentDef.childX,
+                        childY: attachmentDef.childY,
+                    });
+                    this.rescale(skeleton.scale);
+                    return true;
+                };
             };
         };
+
+        if (targetBoneId) return;
+        skeleton.character.pickup(this);
+    };
+
+    detach() {
+        if (!this.attached) return;
+        this.attached = false;
+        this.parent.slots = this.parent.slots.filter(slot => !this.attachmentDef.slots.includes(slot));
+        this.parent.attachments = this.parent.attachments.filter(({ id }) => id != this.id);
+        this.parent = null;
+        this.resetScale();
     };
 
     updateGeometry() {
@@ -89,6 +121,56 @@ class Attachment extends EntityBox {
         for (const child of this.attachments) {
             child.rotate(dR);
         };
+    };
+
+    unRotate() {
+        this.rotation = 0;
+
+        for (const child of this.attachments) {
+            child.unRotate();
+        };
+    };
+
+    propagateRotation(dR) {
+        this.minRotation += dR;
+        this.maxRotation += dR;
+
+        const oldRotation = this.rotation;
+        this.rotation = clamp(oldRotation + dR, this.minRotation, this.maxRotation);
+
+        for (const child of this.attachments) {
+            child.propagateRotation(this.rotation - oldRotation);
+        };
+
+        this.updateGeometry();
+    };
+
+    propagateUnRotation() {
+        this.rotation = 0;
+        if (this.parent) {
+            this.rotation += this.parent.rotation;
+        }
+
+        this.minRotation = this.init.minRotation || -2 * Math.PI;
+        this.maxRotation = this.init.maxRotation || 2 * Math.PI;
+        this.rotationOffsetX = this.init.rotationOffsetX || 0;
+        this.rotationOffsetY = this.init.rotationOffsetY || 0;
+
+        for (const child of this.attachments) {
+            child.propagateUnRotation();
+        };
+    };
+
+    rescale(newScale) {
+        this.width *= newScale / this.scale;
+        this.height *= newScale / this.scale;
+        this.scale = newScale;
+    };
+
+    resetScale() {
+        this.width *= this.ogScale / this.scale;
+        this.height *= this.ogScale / this.scale;
+        this.scale = this.ogScale;
     };
 };
 
@@ -124,7 +206,10 @@ const ITEM = {
                     childY: 0,
                 },
             ]
-        }
+        },
+        weaponAttacks: [
+            SwordAttack
+        ]
     }),
     Mask: new ItemDefinition('Mask', AnimationSets.Mask, {
         width: 8,
@@ -203,15 +288,16 @@ const ITEM = {
     }),
 };
 
-const spawnItem = function (name, x, y) {
+const spawnItem = function (name, x, y, room = Player.entityBox.room) {
     const itemDef = ITEM[name];
     if (!itemDef) return;
-    const newItem = new Attachment(name, itemDef.animationSet, {
+    const newItem = new Attachment(4, name, itemDef.animationSet, {
         x,
         y,
         width: itemDef.init.width,
         height: itemDef.init.height,
+        weaponAttacks: itemDef.init.weaponAttacks || null
     });
-    Player.entityBox.room.entityBoxes.push(newItem);
+    room.addGeometry('entityBox', newItem);
     return newItem;
 };

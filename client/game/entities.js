@@ -1,25 +1,3 @@
-class AnimationSet {
-    constructor(imageSource, name) {
-        this.imageSource = imageSource;
-        this.name = name;
-    };
-
-    async load() {
-        console.log(`LOAD`, this);
-        this.image = await AssetManager.loadImage(this.name, this.imageSource);
-        
-        // const canvas = document.createElement('canvas');
-        // canvas.width = this.sourceImage.width;
-        // canvas.height = this.sourceImage.height;
-        // const ctx = canvas.getContext('2d');
-        // ctx.drawImage(this.sourceImage, 0, 0);
-
-        // this.image = canvas;
-
-        // document.getElementById('images').appendChild(this.image);
-    };
-};
-
 class HitBox extends Box {
     constructor(Owner, x, y, width = 10, height = 10, rotation, color) {
         super(x, y, width, height, rotation, color);
@@ -28,21 +6,23 @@ class HitBox extends Box {
         this.targets = [];
     };
 
-    registerHit(newTarget) {
+    registerHit(dt, newTarget) {
         if (newTarget.id == this.Owner.id) return;
         if (!this.targets.some(target => target.id == newTarget.id)) {
             this.targets.push(newTarget);
         };
         this.collision = true;
+
+        this.attack.onCollision(dt, newTarget);
     };
 };
 
-const collisionSideOrder = [0, 2, 1, 3];
+const collisionSideOrder = [1, 3, 0, 2];
 const entityBoxDirectionOffsets = [
     { x: 0, y: -1 },
     { x: 1, y: 0 },
-    { x: 0, y: 1 },
     { x: -1, y: 0 },
+    { x: 0, y: 1 },
 ];
 class EntityBox extends Box {
     constructor(x, y, width = 10, height = 10, rotation, color) {
@@ -56,7 +36,7 @@ class EntityBox extends Box {
         this.Left = new Vector(x, y, x - width, y, 'green');
         this.Right = new Vector(x, y, x + width, y, 'green');
 
-        this.directions = [this.Floor, this.Left, this.Ceiling, this.Right];
+        this.directions = [this.Floor, this.Left, this.Right, this.Ceiling];
 
         this.attacks = [];
     };
@@ -70,11 +50,13 @@ class EntityBox extends Box {
             const attack = this.attacks[i];
             if (attack.frame == 0) {
                 this.room.hitBoxes.push(...attack.hitboxes.map(({ box }) => box));
+                attack.onStart();
             };
             attack.updateGeometry(dt);
-            attack.frame++;
-            if (attack.durationFrames == attack.frame) {
+            attack.frame += dt * attack.speed;
+            if (attack.durationFrames <= attack.frame) {
                 this.room.hitBoxes = this.room.hitBoxes.filter(box => !attack.hitboxes.some(hitbox => hitbox.box.id == box.id));
+                attack.onEnd(dt);
                 this.attacks = this.attacks.filter(checkAttack => {
                     if (checkAttack.id != attack.id) return true;
                     i--;
@@ -83,7 +65,7 @@ class EntityBox extends Box {
             };
         };
 
-        if(this.y - this.lastY >= 0) {
+        if (this.y - this.lastY >= 0) {
             this.jumping = false;
         };
     }
@@ -111,7 +93,7 @@ class EntityBox extends Box {
         this.Right.p.x = this.x + this.width;
         this.Right.p.y = this.y;
 
-        this.directions = [this.Floor, this.Left, this.Ceiling, this.Right];
+        this.directions = [this.Floor, this.Left, this.Right, this.Ceiling];
     };
 
     resetCollisions() {
@@ -119,30 +101,7 @@ class EntityBox extends Box {
         this.Ceiling.collision = false;
         this.Left.collision = false;
         this.Right.collision = false;
+        
+        this.waterCollision = false;
     };
 };
-
-
-const AnimationSets = {
-    Human: new AnimationSet('./assets/human_male.png', 'Human'),
-    Head: new AnimationSet('./assets/head.png', 'Head'),
-    Torso: new AnimationSet('./assets/torso.png', 'Torso'),
-    LeftArm: new AnimationSet('./assets/left_arm.png', 'LeftArm'),
-    LeftLeg: new AnimationSet('./assets/left_leg.png', 'LeftLeg'),
-    RightArm: new AnimationSet('./assets/right_arm.png', 'RightArm'),
-    RightLeg: new AnimationSet('./assets/right_leg.png', 'RightLeg'),
-    Sword: new AnimationSet('./assets/sword.png', 'Sword'),
-    Mask: new AnimationSet('./assets/mask.png', 'Mask'),
-    Shirt: new AnimationSet('./assets/shirt.png', 'Shirt'),
-    Helm: new AnimationSet('./assets/helm.png', 'Helm'),
-    Gloves: new AnimationSet('./assets/gloves.png', 'Gloves'),
-};
-
-const loadAnimationSets = async function () {
-    loading++;
-    for (animationSet of Object.values(AnimationSets)) {
-        await animationSet.load();
-    };
-    loading--;
-};
-loadAnimationSets();

@@ -56,45 +56,123 @@ const Physics = {
 
         return true;
     },
+    checkEntityBoxBox2(dt, entityBox, box) {
+
+    },
     checkEntityBoxBox(dt, entityBox, box) {
-        for (let j = 0; j < box.sides.length; j++) {
-            const i = collisionSideOrder[j];
-            const extendedBoxSide = new Vector(box.sides[i].p0.x, box.sides[i].p0.y, box.sides[i].p.x, box.sides[i].p.y);
-            const minPX = extendedBoxSide.p0.x < extendedBoxSide.p.x ? extendedBoxSide.p0 : extendedBoxSide.p;
-            const maxPX = extendedBoxSide.p0.x > extendedBoxSide.p.x ? extendedBoxSide.p0 : extendedBoxSide.p;
-            const minPY = extendedBoxSide.p0.y < extendedBoxSide.p.y ? extendedBoxSide.p0 : extendedBoxSide.p;
-            const maxPY = extendedBoxSide.p0.y > extendedBoxSide.p.y ? extendedBoxSide.p0 : extendedBoxSide.p;
-            if (extendedBoxSide.p0.y == extendedBoxSide.p.y) {
+        const intersectionMinX = Math.max(entityBox.AB.p0.x, box.AB.p0.x);
+        const intersectionMaxX = Math.min(entityBox.AB.p.x, box.AB.p.x);
+        const intersectionMinY = Math.max(entityBox.BC.p0.y, box.BC.p0.y);
+        const intersectionMaxY = Math.min(entityBox.BC.p.y, box.BC.p.y);
+        const intersectionWidth = Math.max(0, intersectionMaxX - intersectionMinX);
+        const intersectionHeight = Math.max(0, intersectionMaxY - intersectionMinY);
+
+        if (intersectionWidth < intersectionHeight || entityBox.Floor.collision || entityBox.Ceiling.collision) {
+            entityBox.x -= intersectionWidth * Math.sign(box.x - entityBox.x);
+            entityBox.updateGeometry();
+            entityBox.dx = 0;
+        } else {
+            entityBox.y -= intersectionHeight * Math.sign(box.y - entityBox.y);
+            entityBox.updateGeometry();
+            entityBox.dy = 0;
+            if(Math.sign(box.y - entityBox.y) > 0) {
+                entityBox.Floor.collision = true;
+            };
+        };
+
+        // Physics.checkEntityBoxRamp2(dt, entityBox, box.BC, entityBox.Right.id);
+        // Physics.checkEntityBoxRamp2(dt, entityBox, box.DA, entityBox.Left.id);
+        // Physics.checkEntityBoxRamp2(dt, entityBox, box.CD, entityBox.Ceiling.id);
+        // Physics.checkEntityBoxRamp2(dt, entityBox, box.AB, entityBox.Floor.id);
+        // for (let j = 0; j < box.sides.length; j++) {
+        //     const i = collisionSideOrder[j];
+        //     Physics.checkEntityBoxRamp2(dt, entityBox, box.sides[i]);
+        // };
+        // for (let j = 0; j < box.sides.length; j++) {
+        //     const i = collisionSideOrder[j];
+        //     const extendedBoxSide = new Vector(box.sides[i].p0.x, box.sides[i].p0.y, box.sides[i].p.x, box.sides[i].p.y);
+        //     const minPX = extendedBoxSide.p0.x < extendedBoxSide.p.x ? extendedBoxSide.p0 : extendedBoxSide.p;
+        //     const maxPX = extendedBoxSide.p0.x > extendedBoxSide.p.x ? extendedBoxSide.p0 : extendedBoxSide.p;
+        //     const minPY = extendedBoxSide.p0.y < extendedBoxSide.p.y ? extendedBoxSide.p0 : extendedBoxSide.p;
+        //     const maxPY = extendedBoxSide.p0.y > extendedBoxSide.p.y ? extendedBoxSide.p0 : extendedBoxSide.p;
+        //     if (extendedBoxSide.p0.y == extendedBoxSide.p.y) {
+        //         minPX.x -= (entityBox.width / 2 - 1);
+        //         maxPX.x += entityBox.width / 2 - 1;
+        //     } else {
+        //         minPY.y -= (entityBox.height / 2 - 1);
+        //         maxPY.y += entityBox.height / 2 - 1;
+        //     };
+        //     const intersectionPoint = getRayIntersectionPoint(entityBox.directions[i], extendedBoxSide);
+        //     if (!intersectionPoint) continue;
+
+        //     const isX = entityBoxDirectionOffsets[i].x != 0;
+        //     if (isX) {
+        //         const dx = entityBox.x - intersectionPoint.x;
+        //         if (Math.abs(dx) < entityBox.width / 2) {
+        //             entityBox.x = intersectionPoint.x + entityBoxDirectionOffsets[i].x * entityBox.width / 2;
+        //             entityBox.updateGeometry();
+        //             entityBox.dx = 0;
+        //             entityBox.directions[i].collision = true;
+        //             box.sides[i].collision = true;
+        //         };
+        //     } else {
+        //         const dy = entityBox.y - intersectionPoint.y;
+        //         if (Math.abs(dy) < entityBox.height / 2) {
+        //             entityBox.y = intersectionPoint.y + entityBoxDirectionOffsets[i].y * entityBox.height / 2;
+        //             entityBox.updateGeometry();
+        //             entityBox.dy = 0;
+        //             entityBox.directions[i].collision = true;
+        //             box.sides[i].collision = true;
+        //         };
+        //     };
+        // };
+    },
+    checkEntityBoxRamp2(dt, entityBox, ramp, directionId) {
+        for (let i = 0; i < entityBox.directions.length; i++) {
+            if (directionId  != entityBox.directions[i].id) continue;
+            let vector = ramp;
+            if (vector.p0.y == vector.p.y) {
+                vector = new Vector(ramp.p0.x, ramp.p0.y, ramp.p.x, ramp.p.y);
+                const minPX = ramp.p0.x < ramp.p.x ? vector.p0 : vector.p;
+                const maxPX = ramp.p0.x > ramp.p.x ? vector.p0 : vector.p;
                 minPX.x -= (entityBox.width / 2 - 1);
                 maxPX.x += entityBox.width / 2 - 1;
-            } else {
-                minPY.y -= (entityBox.height / 2 - 1);
-                maxPY.y += entityBox.height / 2 - 1;
             };
-            const intersectionPoint = getRayIntersectionPoint(entityBox.directions[i], extendedBoxSide);
+            //  else if (vector.p0.x == vector.p.x && (entityBox.x - entityBox.lastX)) {
+            //     vector = new Vector(ramp.p0.x, ramp.p0.y, ramp.p.x, ramp.p.y);
+            //     const minPY = ramp.p0.y < ramp.p.y ? vector.p0 : vector.p;
+            //     const maxPY = ramp.p0.y > ramp.p.y ? vector.p0 : vector.p;
+            //     minPY.y -= (entityBox.height / 4 - 1);
+            //     maxPY.y += entityBox.height / 2 - 1;
+            // };
+            const intersectionPoint = getRayIntersectionPoint(entityBox.directions[i], vector);
             if (!intersectionPoint) continue;
 
             const isX = entityBoxDirectionOffsets[i].x != 0;
             if (isX) {
                 const dx = entityBox.x - intersectionPoint.x;
                 if (Math.abs(dx) < entityBox.width / 2) {
-                    entityBox.x = intersectionPoint.x + entityBoxDirectionOffsets[i].x * entityBox.width / 2;
-                    entityBox.updateGeometry();
-                    entityBox.dx = 0;
+                    // entityBox.x = intersectionPoint.x + entityBoxDirectionOffsets[i].x * entityBox.width / 2;
+                    // entityBox.updateGeometry();
+                    // entityBox.dx = 0;
                     entityBox.directions[i].collision = true;
-                    box.sides[i].collision = true;
+                    ramp.collision = true;
+                    return true;
                 };
             } else {
                 const dy = entityBox.y - intersectionPoint.y;
-                if (Math.abs(dy) < entityBox.height / 2) {
-                    entityBox.y = intersectionPoint.y + entityBoxDirectionOffsets[i].y * entityBox.height / 2;
-                    entityBox.updateGeometry();
-                    entityBox.dy = 0;
+                if (Math.abs(dy) <= entityBox.height / 2) {
+                    // entityBox.y = intersectionPoint.y + entityBoxDirectionOffsets[i].y * entityBox.height / 2;
+                    // entityBox.updateGeometry();
+                    // entityBox.dy = 0;
                     entityBox.directions[i].collision = true;
-                    box.sides[i].collision = true;
+                    ramp.collision = true;
+                    return true;
                 };
             };
         };
+
+        return false;
     },
     checkEntityBoxRamp(dt, entityBox, ramp) {
         for (let i = 0; i < entityBox.directions.length; i++) {
@@ -464,6 +542,27 @@ const Physics = {
 
         return true;
     },
+    checkCircleBox2(dt, circle, box) {
+        // temporary variables to set edges for testing
+        let testX = circle.x;
+        let testY = circle.y;
+
+        // which edge is closest?
+        if (circle.x < box.x - box.width / 2) testX = box.x - box.width / 2;      // test left edge
+        else if (circle.x > box.x + box.width / 2) testX = box.x + box.width / 2;   // right edge
+        if (circle.y < box.y - box.height / 2) testY = box.y - box.height / 2;      // top edge
+        else if (circle.y > box.y + box.height / 2) testY = box.y + box.height / 2;   // bottom edge
+
+        // get distance from closest edges
+        let distX = circle.x - testX;
+        let distY = circle.y - testY;
+        let distance = Math.sqrt((distX * distX) + (distY * distY));
+        // if the distance is less than the radius, collision!
+        if (distance < circle.radius) {
+            return true;
+        };
+        return false;
+    },
     checkOOB(circle) {
         if ((circle.x + circle.radius) > Screen.main.width) {
             circle.x = Screen.main.width - circle.radius;
@@ -480,6 +579,23 @@ const Physics = {
         if ((circle.y - circle.radius) < 0) {
             circle.y = circle.radius;
             circle.dy *= -oobBounce;
+        };
+    },
+    checkRoomOOB(room, entityBox) {
+        if (entityBox.x - entityBox.width / 2 < room.x - room.width / 2) {
+            entityBox.x = room.x - room.width / 2 + entityBox.width / 2;
+            entityBox.dx = 0;
+        } else if (entityBox.x + entityBox.width / 2 > room.x + room.TileMap.maxX) {
+            entityBox.x = room.x + room.TileMap.maxX - entityBox.width / 2;
+            entityBox.dx = 0;
+        };
+        if (entityBox.y - entityBox.height / 2 < room.y - room.height / 2) {
+            // entityBox.y = room.y - room.height / 2 + entityBox.height / 2;
+            // entityBox.dy = 0;
+        } else if (entityBox.y + entityBox.height / 2 > room.y + room.TileMap.maxY) {
+            entityBox.y = room.y + room.TileMap.maxY - entityBox.height / 2;
+            entityBox.dy = 0;
+            entityBox.Floor.collision = true;
         };
     },
     // checkOOB(bone) {

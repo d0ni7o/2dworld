@@ -13,7 +13,13 @@ class Attack {
         this.frame = 0;
         this.durationFrames = durationFrames;
 
+        this.speed = 1;
+
         this.updateGeometry();
+
+        for (const hitbox of this.hitboxes) {
+            hitbox.box.attack = this;
+        };
     };
 
     updateGeometry(dt) {
@@ -23,6 +29,15 @@ class Attack {
             this.hitboxes[i].box.updateGeometry();
         };
     }
+
+    onStart(dt) {
+        this.Owner.parent.attacking = true;
+    }
+    onEnd(dt) {
+        this.Owner.parent.attacking = false;
+    }
+
+    onCollision(dt, entityBox) { }
 };
 class Swing1 extends Attack {
     constructor(Owner, dx) {
@@ -98,12 +113,15 @@ class SwordAttack extends Attack {
         this.animationT = 0;
         this.lastAngleOffset = 0;
         this.maxAngleOffset = Math.PI;
+
+        this.speed = 50;
     };
 
     updateGeometry(dt) {
         if (!dt) return;
-        this.Owner.parent.rotate(-this.Owner.rotation);
-        if (this.frame < (this.durationFrames / 2)) {
+        this.Owner.parent.unRotate();
+        if (this.frame < (7 * this.durationFrames / 10)) {
+            this.Owner.parent.rescale(this.Owner.parent.root.skeleton.ogScale + this.animationT * 4);
             this.Owner.parent.rotate(this.frame * this.maxAngleOffset / (this.durationFrames / 2));
             for (let i = 0; i < this.hitboxes.length; i++) {
                 this.hitboxes[i].box.x = -2;
@@ -112,8 +130,15 @@ class SwordAttack extends Attack {
                 this.hitboxes[i].box.height = 1;
                 this.hitboxes[i].box.updateGeometry();
             };
-        } else if (this.frame < (7 * this.durationFrames / 10)) {
+            if (this.frame > (6 * this.durationFrames / 10)) {
+                this.Owner.parent.physOffsetX += this.Owner.parent.dirX * dt * this.Owner.width;
+                this.Owner.physOffsetX += this.Owner.parent.dirX * dt * this.Owner.width;
+            };
+        } else if (this.frame < (9 * this.durationFrames / 10)) {
+            this.Owner.parent.rescale(this.Owner.parent.root.skeleton.ogScale + this.animationT * 4);
             this.Owner.parent.rotate(this.maxAngleOffset - (this.frame * this.maxAngleOffset / (this.durationFrames / 2)));
+            this.Owner.parent.physOffsetX += this.Owner.parent.dirX * dt * this.Owner.width;
+            this.Owner.physOffsetX += this.Owner.parent.dirX * dt * this.Owner.width;
             for (let i = 0; i < this.hitboxes.length; i++) {
                 this.hitboxes[i].box.width = this.Owner.width;
                 this.hitboxes[i].box.height = this.Owner.height * 3;
@@ -123,6 +148,7 @@ class SwordAttack extends Attack {
             };
         } else {
             this.Owner.parent.rotate(this.maxAngleOffset - (this.frame * this.maxAngleOffset / (this.durationFrames / 2)));
+            this.Owner.parent.resetScale();
             for (let i = 0; i < this.hitboxes.length; i++) {
                 this.hitboxes[i].box.x = -2;
                 this.hitboxes[i].box.y = -2;
@@ -134,4 +160,25 @@ class SwordAttack extends Attack {
 
         this.animationT += dt;
     }
+
+    onStart(dt) {
+        super.onStart(dt);
+        this.Owner.parent.animationT = 0;
+        this.Owner.parent.unRotate();
+        this.Owner.parent.animationState = 'pose';
+    }
+
+    onEnd(dt) {
+        super.onEnd(dt);
+        this.Owner.parent.resetScale();
+        this.Owner.parent.unRotate();
+        this.Owner.parent.updateGeometry();
+        this.Owner.parent.skeleton.resetAnimationTime();
+        this.Owner.parent.physOffsetX = 0;
+        this.Owner.parent.physOffsetY = 0;
+        this.Owner.physOffsetX = 0;
+        this.Owner.physOffsetY = 0;
+    }
+
+    onCollision(dt, entityBox) { }
 };
