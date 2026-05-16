@@ -330,6 +330,8 @@ class Room {
             //     if (entityBox.animate) entityBox.animate(dt);
             // };
         };
+
+        TestCamera.updatePos(dt);
     };
 
     render() {
@@ -337,39 +339,72 @@ class Room {
             console.log(`FIRST RENDER`);
             rendered = true;
         };
-        Screen.ctx.clearRect(0, 0, Screen.main.width, Screen.main.height);
+        // Screen.ctx.clearRect(0, 0, Screen.main.width, Screen.main.height);
+        Screen.cameraCtx.clearRect(0, 0, Screen.cameraView.width, Screen.cameraView.height);
 
-        Screen.renderTileMap(this.TileMap);
-        Screen.renderMouse(this.TileMap);
+        for (const column of this.TileMap.map) {
+            for (const tile of column) {
+                if (TestCamera.checkBoxRender({ x: tile.Position.x, y: tile.Position.y, width: tileSize, height: tileSize })) {
+                    Screen.renderTile(TestCamera.getTileImage(tile), this.TileMap, Screen.cameraCtx);
+                };
+            };
+        };
+
+        Screen.renderMouse(Screen.cameraCtx);
 
         for (const box of this.boxes) {
-            Screen.renderBox(box);
+            if (TestCamera.checkBoxRender(box)) {
+                Screen.renderBox(TestCamera.getBoxImage(box), Screen.cameraCtx);
+            };
         };
         for (const circle of this.circles) {
             Screen.renderCircle(circle);
         };
         for (const ramp of this.ramps) {
-            Screen.renderRay(ramp);
+            if (TestCamera.checkRayRender(ramp)) {
+                Screen.renderRay(TestCamera.getRayImage(ramp), Screen.cameraCtx);
+            };
         };
         for (const entityBox of this.entityBoxes) {
-            Screen.renderEntityBox(entityBox);
+            if (TestCamera.checkBoxRender(entityBox)) {
+                Screen.renderEntityBox(TestCamera.getBoxImage(entityBox), Screen.cameraCtx);
+            };
         };
         for (const hitbox of this.hitBoxes) {
-            Screen.renderBox(hitbox);
+            if (TestCamera.checkBoxRender(hitbox)) {
+                Screen.renderBox(TestCamera.getBoxImage(hitbox), Screen.cameraCtx);
+            };
         };
         for (const door of this.doors) {
-            Screen.renderBox(door);
+            if (TestCamera.checkBoxRender(door)) {
+                Screen.renderBox(TestCamera.getBoxImage(door), Screen.cameraCtx);
+            };
         };
+        // for (const character of this.characters) {
+        //     Screen.renderSkeleton(character.skeleton);
+        // };
         for (const character of this.characters) {
-            Screen.renderSkeleton(character.skeleton);
+            if (TestCamera.checkBoxRender(character.skeleton.Controller)) {
+                Screen.renderSkeleton(character.skeleton, Screen.cameraCtx);
+            };
         };
-        Screen.renderWater(this.water);
-        for (const ray of this.rays) {
-            Screen.renderRay(ray);
+        for (const waterInstance of this.water.instances) {
+            waterInstance.updateDimensions();
+            if (TestCamera.checkWaterRender(waterInstance)) {
+                Screen.renderWaterInstance(TestCamera.getWaterImage(waterInstance), Screen.cameraCtx);
+            };
+
         };
-        for (const point of this.points) {
-            Screen.renderCircle({ color: 'red', radius: 10, ...point });
-        };
+        // Screen.renderWater(this.water);
+        // for (const ray of this.rays) {
+        //     Screen.renderRay(ray);
+        // };
+        // for (const point of this.points) {
+        //     Screen.renderCircle({ color: 'red', radius: 10, ...point });
+        // };
+
+        // TestCamera.updateView();
+        // TestCamera.render();
     };
 
     gravity(entity) {

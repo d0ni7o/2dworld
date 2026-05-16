@@ -16,12 +16,12 @@ let TileUpdates = {};
 const handleTileInput = function (event) {
     if (Keys.renderInventory || ITEM_INVENTORY.render || CONTEXT_MENU.render) return;
     const x = clamp(
-        event.clientX,
+        event.clientX + TestCamera.x - Screen.cameraView.width / 2,
         Player.entityBox.room.x - Player.entityBox.room.width / 2,
         Player.entityBox.room.x + Player.entityBox.room.width / 2,
     );
     const y = clamp(
-        event.clientY,
+        event.clientY + TestCamera.y - Screen.cameraView.height / 2,
         Player.entityBox.room.y - Player.entityBox.room.height / 2,
         Player.entityBox.room.y + Player.entityBox.room.height / 2,
     );
@@ -71,8 +71,8 @@ window.addEventListener('mousedown', function (event) {
         break;
     };
 
-    Mouse.x = event.clientX;
-    Mouse.y = event.clientY;
+    Mouse.x = event.clientX + TestCamera.x - Screen.cameraView.width / 2;
+    Mouse.y = event.clientY + TestCamera.y - Screen.cameraView.height / 2;
 
     lastEventButton = event.button;
     handleTileInput(event);
@@ -81,8 +81,8 @@ window.addEventListener('mousedown', function (event) {
 window.addEventListener('mouseup', function (event) {
     mousedown = false;
 
-    Mouse.x = event.clientX;
-    Mouse.y = event.clientY;
+    Mouse.x = event.clientX + TestCamera.x - Screen.cameraView.width / 2;
+    Mouse.y = event.clientY + TestCamera.y - Screen.cameraView.height / 2;
 
     TileUpdates = {};
 
@@ -91,8 +91,8 @@ window.addEventListener('mouseup', function (event) {
     // spawnCircle(event.clientX, event.clientY, minCircleSize);
 });
 window.addEventListener('mousemove', function (event) {
-    Mouse.x = event.clientX;
-    Mouse.y = event.clientY;
+    Mouse.x = event.clientX + TestCamera.x - Screen.cameraView.width / 2;
+    Mouse.y = event.clientY + TestCamera.y - Screen.cameraView.height / 2;
 
     if (!mousedown) return;
 
@@ -126,6 +126,7 @@ window.addEventListener('mousemove', function (event) {
 });
 window.addEventListener('resize', function (event) {
     Screen.resize();
+    Screen.resize(Screen.cameraView);
 });
 const Keys = {};
 window.addEventListener('keydown', function (event) {

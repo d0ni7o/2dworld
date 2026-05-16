@@ -38,20 +38,42 @@ class WaterInstance {
         for (let a = 1; a <= MAX_WATER_PER_TILE; a++) {
             const waterHeight = a * tileSize / MAX_WATER_PER_TILE;
             this.Collider[a] = new Box(
-                this.tile.x * tileSize + tileSize / 2,
-                this.tile.y * tileSize + tileSize / 2 + (tileSize - waterHeight) / 2,
+                this.tile.x * tileSize + tileSize / 2 + this.tile.TileMap.room.x - this.tile.TileMap.room.width / 2,
+                this.tile.y * tileSize + tileSize / 2 + (tileSize - waterHeight) / 2 + this.tile.TileMap.room.y - this.tile.TileMap.room.height / 2,
                 tileSize,
                 waterHeight
             );
             this.ColliderDy[a] = new Box(
-                this.tile.x * tileSize + tileSize / 2,// + (tileSize - waterHeight) / 2,
-                this.tile.y * tileSize + tileSize / 2,
+                this.tile.x * tileSize + tileSize / 2 + this.tile.TileMap.room.x - this.tile.TileMap.room.width / 2,// + (tileSize - waterHeight) / 2,
+                this.tile.y * tileSize + tileSize / 2 + this.tile.TileMap.room.y - this.tile.TileMap.room.height / 2,
                 waterHeight,
                 tileSize
             );
         };
         // this.collider = new Box(this.tile.x * tileSize + tileSize / 2, this.tile.y * tileSize + tileSize / 2, tileSize, tileSize);
         // this.timeOffset = Math.random();
+    };
+
+    getDimensions() {
+        let waterWidth;
+        let waterHeight;
+        if (this.dy != 0) {
+            waterWidth = this.amount * tileSize / MAX_WATER_PER_TILE;
+            waterHeight = tileSize;
+        } else {
+            waterWidth = tileSize;
+            waterHeight = this.amount * tileSize / MAX_WATER_PER_TILE;
+        };
+        const x = this.tile.x * tileSize + this.tile.TileMap.room.x - this.tile.TileMap.room.width / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterWidth) / 2;
+        const y = this.tile.y * tileSize + this.tile.TileMap.room.y - this.tile.TileMap.room.height / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterHeight);
+
+        return {
+            x, y, width: waterWidth, height: waterHeight
+        };
+    };
+
+    updateDimensions() {
+        this.dimensions = this.getDimensions();
     };
 
     getCollider() {

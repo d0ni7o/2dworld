@@ -2,7 +2,8 @@
 <html>
 
 <body>
-    <canvas id="main" style="position: fixed; top: 0; left: 0;"></canvas>
+    <canvas id="main" style="position: fixed; top: 0; left: 0; display: none;"></canvas>
+    <canvas id="camera-view" style="position: fixed; top: 0; left: 0;"></canvas>
     <div id="images" style="display: none;"></div>
 </body>
 <script src="./game/utils.js"></script>
@@ -21,6 +22,7 @@
 <script src="./game/screen.js"></script>
 <script src="./game/tilemap.js"></script>
 <script src="./game/room.js"></script>
+<script src="./game/camera.js"></script>
 <script src="./game/input.js"></script>
 <script>
     Screen.setup();
@@ -135,10 +137,10 @@
     const World = {
         rooms: [
             new Room(
-                Screen.main.width / 2,
-                Screen.main.height / 2,
-                Screen.main.width,
-                Screen.main.height,
+                0,
+                0,
+                tileSize * 50,
+                tileSize * 50,
                 [
                     // new Box(-Screen.main.width / 8, 0, Screen.main.width / 4, Screen.main.height / 4),
                     // new Box(0, Screen.main.height / 8 + 100, 50, 100),
@@ -161,7 +163,7 @@
                 Screen.main.width / 4 + Screen.main.width / 2,
                 Screen.main.height / 4,
                 Screen.main.width / 2,
-                Screen.main.height / 2,
+                Screen.main.height * 2,
                 [
                 ],
                 [
@@ -225,6 +227,8 @@
     let tileChange = 0;
     let itemsSpawned = false;
 
+    let TestCamera = new Camera();
+
     let HumanInventory;
     let timeScale = 1;
     const Game = {
@@ -236,20 +240,21 @@
 
                 PlayerCharacter = new Human(100, 100, 4);
                 Player.entityBox = PlayerCharacter.skeleton.Controller;
+                TestCamera.setTarget(PlayerCharacter.skeleton.Controller);
 
                 World.rooms[0].addGeometry('character', PlayerCharacter);
                 World.rooms[0].addGeometry('character', new Human(200, 100, 1));
                 World.rooms[0].addGeometry('character', new Human(400, 100, 2));
                 World.rooms[0].addGeometry('character', new Human(600, 100, 3));
 
-                for (let i = 0; i < 2; i++) {
+                for (let i = 0; i < 1; i++) {
                     spawnItem('Sword', 100, 100);
-                    spawnItem('Sword', 150, 100);
-                    spawnItem('Sword', 400, 100);
-                    spawnItem('Mask', 200, 100);
-                    spawnItem('Shirt', 250, 100);
-                    spawnItem('Helm', 300, 100);
-                    spawnItem('Gloves', 350, 100);
+                    // spawnItem('Sword', 150, 100);
+                    // spawnItem('Sword', 400, 100);
+                    // spawnItem('Mask', 200, 100);
+                    // spawnItem('Shirt', 250, 100);
+                    // spawnItem('Helm', 300, 100);
+                    // spawnItem('Gloves', 350, 100);
                 };
 
                 World.rooms[0].addGeometry('character', new Chest(500, 100, 4));

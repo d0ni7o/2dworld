@@ -2,22 +2,25 @@
 
 const Screen = {
     main: document.getElementById('main'),
+    cameraView: document.getElementById('camera-view'),
     setup: function () {
-        this.ctx = this.main.getContext('2d');
+        this.ctx = this.main.getContext('2d', { willReadFrequently: true });
+        this.cameraCtx = this.cameraView.getContext('2d', { willReadFrequently: true });
         this.resize();
+        this.resize(this.cameraView);
     },
-    renderCircle: function (circle) {
-        this.ctx.beginPath();
-        this.ctx.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI);
-        this.ctx.closePath();
-        this.ctx.fillStyle = /*circle.collision ? 'red' : */circle.color;
-        this.ctx.fill();
+    renderCircle: function (circle, ctx = this.ctx) {
+        ctx.beginPath();
+        ctx.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI);
+        ctx.closePath();
+        ctx.fillStyle = /*circle.collision ? 'red' : */circle.color;
+        ctx.fill();
     },
     renderEntityBox: function (box, ctx = this.ctx) {
-        this.renderBox(box);
+        this.renderBox(box, ctx);
         return;
         for (const ray of box.directions) {
-            this.renderRay(ray);
+            this.renderRay(ray, ctx);
         };
     },
     renderRect: function (box, ctx = this.ctx) {
@@ -33,6 +36,7 @@ const Screen = {
         // ctx.setTransform(1, 0, 0, 1, 0, 0);
         if (box.animator) {
             try {
+                // if(!box.isBone && ctx.canvas.id == 'camera-view') console.log(`BOX ANIMATOR!!!`, box);
                 this.renderPng({
                     x: box.x,
                     y: box.y,
@@ -45,9 +49,9 @@ const Screen = {
                     rotationOffsetY: box.rotationOffsetY,
                     offsetX: box.offsetX || 0,
                     offsetY: box.offsetY || 0,
-                });
+                }, ctx);
             } catch (error) {
-                console.log(box);
+                console.error(box);
                 throw (error);
             }
             return;
@@ -126,8 +130,13 @@ const Screen = {
             Screen.renderBone(bone, ctx);
         };
     },
-    renderMouse: function (ctx = this.ctx) {
-        this.renderCircle({ ...Mouse, radius: 10, color: 'red' });
+    renderMouse: function (ctx = this.cameraCtx) {
+        this.renderCircle({ 
+            x: Mouse.x - TestCamera.x + Screen.cameraView.width / 2,
+            y: Mouse.y - TestCamera.y + Screen.cameraView.height / 2,
+            radius: 10, 
+            color: 'red' 
+        }, ctx);
     },
     renderPng: function (Image, ctx = this.ctx) {
         // console.log(`RENDER PNG`, Image);
@@ -153,7 +162,7 @@ const Screen = {
         );
         ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
-    renderSkeleton(skeleton) {
+    renderSkeleton(skeleton, ctx = this.ctx) {
         // console.log(`RENDER SKELETON`, skeleton);
 
 
@@ -161,13 +170,13 @@ const Screen = {
             for (const i of skeleton.reverseRenderIndex) {
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder == 1) {
-                        this.renderBox(attachment);
+                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
                     };
                 };
-                this.renderEntityBox(skeleton.bones[i]);
+                this.renderEntityBox(TestCamera.getBoxImage(skeleton.bones[i]), ctx);
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder <= 0) {
-                        this.renderBox(attachment);
+                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
                     };
                 };
             };
@@ -175,40 +184,111 @@ const Screen = {
             for (const i of skeleton.renderIndex) {
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder == -1) {
-                        this.renderBox(attachment);
+                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
                     };
                 };
-                this.renderEntityBox(skeleton.bones[i]);
+                this.renderEntityBox(TestCamera.getBoxImage(skeleton.bones[i]), ctx);
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder >= 0) {
-                        this.renderBox(attachment);
+                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
                     };
                 };
             };
         };
     },
-    renderTileMap(tileMap) {
+    renderTileMap(tileMap, ctx) {
         for (let x = 0; x < tileMap.map.length; x++) {
             for (let y = 0; y < tileMap.map[x].length; y++) {
-                Screen.renderRect({
-                    x: x * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
-                    y: y * tileSize + tileMap.room.y - tileMap.room.height / 2 + tileSize / 2,
-                    width: tileSize,
-                    height: tileSize,
-                    color: tileMap.map[x][y].color || 'lightblue'
-                })
-                if (!tileMap.map[x][y].image) {
-                    continue;
-                };
-                Screen.renderPng({
-                    drawing: tileMap.map[x][y].image,
-                    x: x * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
-                    y: y * tileSize + tileMap.room.y - tileMap.room.height / 2 + tileSize / 2,
-                    width: tileSize,
-                    height: tileSize
-                })
+                this.renderTile(tileMap.map[x][y], tileMap, ctx);
+                // Screen.renderRect({
+                //     x: x * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
+                //     y: y * tileSize + tileMap.room.y - tileMap.room.height / 2 + tileSize / 2,
+                //     width: tileSize,
+                //     height: tileSize,
+                //     color: tileMap.map[x][y].color || 'lightblue'
+                // }, ctx)
+                // if (!tileMap.map[x][y].image) {
+                //     continue;
+                // };
+                // Screen.renderPng({
+                //     drawing: tileMap.map[x][y].image,
+                //     x: x * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
+                //     y: y * tileSize + tileMap.room.y - tileMap.room.height / 2 + tileSize / 2,
+                //     width: tileSize,
+                //     height: tileSize
+                // }, ctx)
             };
         };
+    },
+    renderTile(tile, tileMap, ctx) {
+        Screen.renderRect({
+            x: tile.Position.x,// * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
+            y: tile.Position.y,// * tileSize + tileMap.room.y - tileMap.room.height / 2 + tileSize / 2,
+            width: tileSize,
+            height: tileSize,
+            color: tileMap.map[tile.x][tile.y].color || 'lightblue'
+        }, ctx)
+        if (!tileMap.map[tile.x][tile.y].image) {
+            return;
+        };
+        Screen.renderPng({
+            drawing: tileMap.map[tile.x][tile.y].image,
+            x: tile.Position.x,// * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
+            y: tile.Position.y,// * tileSize + tileMap.room.y - tileMap.room.height / 2 + tileSize / 2,
+            width: tileSize,
+            height: tileSize
+        }, ctx)
+    },
+    renderWaterInstance(waterInstance, ctx) {
+        if (!waterInstance.amount) return;
+        // Screen.renderRect({
+        //     x: waterInstance.tile.x * tileSize + water.room.x - water.room.width / 2 + tileSize / 2,
+        //     y: waterInstance.tile.y * tileSize + water.room.y - water.room.height / 2 + tileSize / 2,
+        //     width: tileSize,
+        //     height: tileSize,
+        //     color: 'rgba(0, 140, 255, 0.5)'
+        // })
+        // let waterWidth;
+        // let waterHeight;// = waterInstance.amount * tileSize / MAX_WATER_PER_TILE;
+        // if (waterInstance.dy != 0) {
+        //     waterWidth = waterInstance.amount * tileSize / MAX_WATER_PER_TILE;
+        //     waterHeight = tileSize;
+        // } else {
+        //     waterWidth = tileSize;
+        //     waterHeight = waterInstance.amount * tileSize / MAX_WATER_PER_TILE;
+        // };
+        // const x = waterInstance.tile.x * tileSize + waterInstance.tile.TileMap.room.x - waterInstance.tile.TileMap.room.width / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterWidth) / 2;
+        // let y = waterInstance.tile.y * tileSize + waterInstance.tile.TileMap.room.y - waterInstance.tile.TileMap.room.height / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterHeight);
+
+        // const bottomNeighbour = waterInstance.tile.getNeighbour(0, 1);
+        // if(bottomNeighbour) {
+        //     if(bottomNeighbour.imageIndex == 2 || bottomNeighbour.imageIndex == 4) {
+        //         y += tileSize / 2;
+        //     }
+        // };
+
+        ctx.fillStyle = `rgba(0, ${140 - waterInstance.amount * 5}, 255, 0.6)`;
+        ctx.fillRect(
+            waterInstance.x,// + slot.padding / 2, 
+            waterInstance.y,// + slot.padding / 2, 
+            waterInstance.width,
+            waterInstance.height
+        );
+
+
+        // ctx.setTransform(1, 0, 0, 1, 0, 0);
+        // ctx.fillStyle = 'black';
+        // ctx.font = '16px Arial'
+        // ctx.fillText(waterInstance.amount, x + tileSize / 2, y + tileSize / 2);
+
+        if (waterInstance.amount) {
+            ctx.strokeStyle = 'blue';
+            ctx.strokeRect(waterInstance.x, waterInstance.y, waterInstance.width, waterInstance.height);
+            // this.renderBox(waterInstance);
+        };
+        // if (!tileMap.map[x][y].image) {
+        //     continue;
+        // };
     },
     renderWater(water, ctx = this.ctx) {
         // const boundaries = water.getBoundaries();
@@ -222,59 +302,14 @@ const Screen = {
         // ctx.fill();
         // return;
         for (let i = 0; i < water.instances.length; i++) {
-            if (!water.instances[i].amount) continue;
-            // Screen.renderRect({
-            //     x: water.instances[i].tile.x * tileSize + water.room.x - water.room.width / 2 + tileSize / 2,
-            //     y: water.instances[i].tile.y * tileSize + water.room.y - water.room.height / 2 + tileSize / 2,
-            //     width: tileSize,
-            //     height: tileSize,
-            //     color: 'rgba(0, 140, 255, 0.5)'
-            // })
-            let waterWidth;
-            let waterHeight;// = water.instances[i].amount * tileSize / MAX_WATER_PER_TILE;
-            if (water.instances[i].dy != 0) {
-                waterWidth = water.instances[i].amount * tileSize / MAX_WATER_PER_TILE;
-                waterHeight = tileSize;
-            } else {
-                waterWidth = tileSize;
-                waterHeight = water.instances[i].amount * tileSize / MAX_WATER_PER_TILE;
-            };
-            const x = water.instances[i].tile.x * tileSize + water.room.x - water.room.width / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterWidth) / 2;
-            let y = water.instances[i].tile.y * tileSize + water.room.y - water.room.height / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterHeight);
-
-            // const bottomNeighbour = water.instances[i].tile.getNeighbour(0, 1);
-            // if(bottomNeighbour) {
-            //     if(bottomNeighbour.imageIndex == 2 || bottomNeighbour.imageIndex == 4) {
-            //         y += tileSize / 2;
-            //     }
-            // };
-
-
-            ctx.fillStyle = `rgba(0, ${140 - water.instances[i].amount * 5}, 255, 0.6)`;
-            ctx.fillRect(
-                x,// + slot.padding / 2, 
-                y,// + slot.padding / 2, 
-                waterWidth,
-                waterHeight
-            );
-
-
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            // ctx.fillStyle = 'black';
-            // ctx.font = '16px Arial'
-            // ctx.fillText(water.instances[i].amount, x + tileSize / 2, y + tileSize / 2);
-
-            if (water.instances[i].amount) this.renderBox(water.instances[i].getCollider());
-            // if (!tileMap.map[x][y].image) {
-            //     continue;
-            // };
+            this.renderWaterInstance(water.instances[i], ctx);
         };
     },
     resize: function (screen = this.main) {
         screen.width = window.innerWidth;
         screen.height = window.innerHeight;
     },
-    renderItemInventory: function (item = ITEM_INVENTORY.target, screen = this.main, ctx = this.ctx) {
+    renderItemInventory: function (item = ITEM_INVENTORY.target, screen = this.cameraView, ctx = this.cameraCtx) {
         if (!Keys.renderInventory) HumanInventory.targetSlot = null;
 
         let slotSelected = false;
@@ -287,14 +322,14 @@ const Screen = {
         const slotSizePadded = (slotSize + padding + 1)
         const iWidth = perRow * slotSizePadded;
         const minX = clamp(
-            item.x - iWidth / 2 + slotSizePadded / 2,
-            Player.entityBox.room.x - Player.entityBox.room.width / 2 + slotSize / 2,
-            Player.entityBox.room.x + Player.entityBox.room.TileMap.maxX - iWidth + slotSize / 2
+            item.x - iWidth / 2 + slotSizePadded / 2 - TestCamera.x + Screen.cameraView.width / 2,
+            slotSize / 2,
+            Screen.cameraView.width - iWidth + slotSize / 2
         );
         const minY = clamp(
-            item.y - nRows * slotSize,
-            Player.entityBox.room.y - Player.entityBox.room.height / 2 + slotSize / 2,
-            Player.entityBox.room.y + Player.entityBox.room.TileMap.maxY - nRows * slotSize + slotSize / 2
+            item.y - nRows * slotSize - TestCamera.y + Screen.cameraView.height / 2,
+            slotSize / 2,
+            Screen.cameraView.height - nRows * slotSize + slotSize / 2
         );
         const slotsY = HumanInventory.maxY + HumanInventory.Torso.width / 2;
 
@@ -383,7 +418,7 @@ const Screen = {
 
         // if (!slotSelected) HumanInventory.targetSlot = null;
     },
-    renderContextMenu: function (menu = CONTEXT_MENU, screen = this.main, ctx = this.ctx) {
+    renderContextMenu: function (menu = CONTEXT_MENU, screen = this.cameraView, ctx = this.cameraCtx) {
         const padding = 5;
         const totalPaddingWidth = padding * tileSize;
         const totalPaddingHeight = padding;
@@ -392,9 +427,9 @@ const Screen = {
         const slotSizePadded = (slotSize + padding + 1)
         const iWidth = perRow * slotSizePadded;
         const minX = clamp(
-            screen.width / 2 - iWidth / 2 + slotSizePadded / 2 - screen.width / 2 + menu.target.x,
-            Player.entityBox.room.x - Player.entityBox.room.width / 2 + slotSize / 2,
-            Player.entityBox.room.x + Player.entityBox.room.TileMap.maxX - iWidth + slotSize / 2
+            screen.width / 2 - iWidth / 2 + slotSizePadded / 2 - screen.width / 2 + menu.target.x - TestCamera.x + Screen.cameraView.width / 2,
+            slotSize / 2,
+            Screen.cameraView.width - iWidth + slotSize / 2
         );
 
         let slotSelected = false;
@@ -405,9 +440,9 @@ const Screen = {
 
             const x = minX + (i % perRow) * slotSizePadded;
             const y = clamp(
-                menu.target.y - menu.target.height,
-                Player.entityBox.room.y - Player.entityBox.room.height / 2 + slotSize / 2,
-                Player.entityBox.room.y + Player.entityBox.room.TileMap.maxY - slotSizePadded + slotSize / 2
+                menu.target.y - menu.target.height - TestCamera.y + Screen.cameraView.height / 2,
+                slotSize / 2,
+                Screen.cameraView.height - slotSizePadded + slotSize / 2
             );
             slotSelected = this.renderInventorySlot({
                 x,
@@ -429,7 +464,7 @@ const Screen = {
             };
         };
     },
-    renderInventory: function (character, screen = this.main, ctx = this.ctx) {
+    renderInventory: function (character, screen = this.cameraView, ctx = this.cameraCtx) {
         HumanInventory.Controller.x = screen.width / 2;
         HumanInventory.Controller.y = screen.height / 2;
         HumanInventory.Controller.updateGeometry();
@@ -478,7 +513,7 @@ const Screen = {
                     animator: { ...character.skeleton.bones[i].animator, image: HumanInventory.bones[i].animator.image },
                     x: HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
                     y: HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
-                });
+                }, ctx);
 
 
                 slotSelected = this.renderInventorySlot({
@@ -529,12 +564,12 @@ const Screen = {
 
         if (!slotSelected) HumanInventory.targetSlot = null;
     },
-    renderInventorySlot(slot, slotSelected, ctx = this.ctx) {
+    renderInventorySlot(slot, slotSelected, ctx = this.cameraCtx) {
         let isSlotSelected = slotSelected;
 
         if (!isSlotSelected && Physics.checkCircleBox2(0, {
-            x: Mouse.x,
-            y: Mouse.y,
+            x: Mouse.x - TestCamera.x + Screen.cameraView.width / 2,
+            y: Mouse.y - TestCamera.y + Screen.cameraView.height / 2,
             radius: 1,
         }, slot)) {
             isSlotSelected = true;
@@ -560,8 +595,8 @@ const Screen = {
             let x = slot.x;
             let y = slot.y;
             if (HumanInventory.selectedSlot?.name == slot.name) {
-                x = Mouse.x;
-                y = Mouse.y;
+                x = Mouse.x - TestCamera.x + Screen.cameraView.width / 2;
+                y = Mouse.y - TestCamera.y + Screen.cameraView.height / 2;
             };
             this.renderBox({
                 x: x,
@@ -572,7 +607,7 @@ const Screen = {
                 animator: {
                     image: slot.item.animator.image
                 }
-            });
+            }, ctx);
         };
 
         ctx.lineWidth = slot.padding || 1;

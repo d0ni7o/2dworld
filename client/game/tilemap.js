@@ -53,6 +53,15 @@ class Tile {
         this.colliders = [];
 
         this.imageCycle = -1;
+
+        this.calculatePosition();
+    };
+
+    calculatePosition() {
+        this.Position = {
+            x: this.x * tileSize + this.TileMap.room.x - this.TileMap.room.width / 2 + tileSize / 2,
+            y: this.y * tileSize + this.TileMap.room.y - this.TileMap.room.height / 2 + tileSize / 2,
+        };
     };
 
     getNeighbour(offsetX, offsetY = 0) {
@@ -114,27 +123,27 @@ class Tile {
         this.image = tileSet.images[imageIndex];
         this.imageIndex = imageIndex;
 
-        switch(this.imageIndex) {
+        switch (this.imageIndex) {
             case 2:
-                this.GhostCollider =  {
+                this.GhostCollider = {
                     right: true,
                     bottom: true
                 };
                 break;
             case 3:
-                this.GhostCollider =  {
+                this.GhostCollider = {
                     left: true,
                     top: true
                 };
                 break;
             case 4:
-                this.GhostCollider =  {
+                this.GhostCollider = {
                     left: true,
                     bottom: true
                 };
                 break;
             case 5:
-                this.GhostCollider =  {
+                this.GhostCollider = {
                     right: true,
                     top: true
                 };
@@ -261,13 +270,6 @@ class TileMap {
 
         this.map = [];
 
-        for (let x = 0; x < tilesX; x++) {
-            this.map.push([]);
-            for (let y = 0; y < tilesY; y++) {
-                this.map[x].push(new Tile(this, x, y));
-            };
-        };
-
         this.room = room;
         this.room.TileMap = this;
 
@@ -276,6 +278,13 @@ class TileMap {
 
         this.maxX = this.width - this.room.width / 2;
         this.maxY = this.height - this.room.height / 2;
+
+        for (let x = 0; x < tilesX; x++) {
+            this.map.push([]);
+            for (let y = 0; y < tilesY; y++) {
+                this.map[x].push(new Tile(this, x, y));
+            };
+        };
     };
 
     getTile(x, y) {
