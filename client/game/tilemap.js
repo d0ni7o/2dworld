@@ -85,7 +85,7 @@ class Tile {
         const nLeft = this.getNeighbour(-1, 0);
 
         if (!calc) {
-            this.imageCycle = (this.imageCycle + 1) % 3;
+            this.imageCycle = 0;//(this.imageCycle + 1) % 3;
             if (nTop?.image) {
                 imageIndex = 2 * this.imageCycle + 1;
             } else {
@@ -106,16 +106,16 @@ class Tile {
                         break;
                 };
             };
-            if (nLeft?.image && nBottomRight?.image) {
-                if ((nLeft.imageIndex == 0 || nLeft.imageIndex == 5) && (nBottomRight.imageIndex == 0 || nBottomRight.imageIndex == 4)) {
-                    imageIndex = 4;
-                };
-            };
-            if (nRight?.image && nBottomLeft?.image) {
-                if ((nRight.imageIndex == 0 || nRight.imageIndex == 3) && (nBottomLeft.imageIndex == 0 || nBottomLeft.imageIndex == 2)) {
-                    imageIndex = 2;
-                };
-            };
+            // if (nLeft?.image && nBottomRight?.image) {
+            //     if ((nLeft.imageIndex == 0 || nLeft.imageIndex == 5) && (nBottomRight.imageIndex == 0 || nBottomRight.imageIndex == 4)) {
+            //         imageIndex = 4;
+            //     };
+            // };
+            // if (nRight?.image && nBottomLeft?.image) {
+            //     if ((nRight.imageIndex == 0 || nRight.imageIndex == 3) && (nBottomLeft.imageIndex == 0 || nBottomLeft.imageIndex == 2)) {
+            //         imageIndex = 2;
+            //     };
+            // };
         };
 
 
@@ -172,12 +172,12 @@ class Tile {
             if (imageIndex == 0 || imageIndex == 1) {
                 nBottom.setType(nBottom.tileSet, 1, true);
             };
-            if (imageIndex == 2) {
-                nBottom.setType(nBottom.tileSet, 3, true);
-            };
-            if (imageIndex == 4) {
-                nBottom.setType(nBottom.tileSet, 5, true);
-            };
+            // if (imageIndex == 2) {
+            //     nBottom.setType(nBottom.tileSet, 3, true);
+            // };
+            // if (imageIndex == 4) {
+            //     nBottom.setType(nBottom.tileSet, 5, true);
+            // };
         };
 
         this.updateCollider();
@@ -230,6 +230,7 @@ class Tile {
             this.bottomCollider = null;
         };
 
+        if(this.boxCollider) this.boxCollider = null;
     };
 
     updateCollider() {
@@ -315,6 +316,7 @@ class TileMap {
                 const nBottomLeft = tile.getNeighbour(-1, 1);
 
                 if (tile.imageIndex == 0 || tile.imageIndex == 1) {
+                    tile.boxCollider = new Box(tile.Position.x, tile.Position.y, tileSize, tileSize);
                     if (!nLeft?.image || nLeft.imageIndex == 3 || nLeft.imageIndex == 4) {
                         tile.leftCollider = new Vector(
                             tile.x * tileSize + this.room.x - this.room.width / 2,
@@ -467,6 +469,7 @@ class TileMap {
 
 const TileSets = {
     Grass: new TileSet('./assets/grass_tileset.png', 'Grass'),
+    CaveWall: new TileSet('./assets/cave_wall_tileset.png', 'CaveWall'),
 };
 
 const loadTileSets = async function () {

@@ -141,12 +141,22 @@ class Box {
         this.sides = [this.AB, this.BC, this.CD, this.DA];
     };
 
+    hasTileBelow() {
+        const tileX = Math.floor((this.x - this.room.x + this.room.width / 2) / tileSize);
+        const tileY = Math.floor((this.y - this.room.y + this.room.height / 2) / tileSize);
+        const tile = this.room.TileMap.getTile(tileX, tileY + 1);
+        return tile && tile.image;
+    };
+
     updatePos(dt) {
         this.lastX = this.x;
         this.lastY = this.y;
 
         this.dx += this.ddx * dt;
         this.dy += this.ddy * dt;
+
+        let maxFallSpeed = Math.abs(this.dy) * (dt) > this.height / 2 && this.hasTileBelow();
+        if (maxFallSpeed) this.dy = Math.sign(this.dy) * this.height / 2;
 
         this.x += this.dx * dt;
         this.y += this.dy * dt;
@@ -155,7 +165,7 @@ class Box {
         this.ddy = 0;
 
         this.dx *= this.airResistanceX;
-        this.dy *= this.airResistanceY;
+        if (!maxFallSpeed) this.dy *= this.airResistanceY;
 
         this.updateGeometry();
     };

@@ -7,6 +7,7 @@
     <div id="images" style="display: none;"></div>
 </body>
 <script src="./game/utils.js"></script>
+<script src="./game/perlin.js"></script>
 <script src="./game/ajax.js"></script>
 <script src="./game/asset-manager.js"></script>
 <script src="./game/animation.js"></script>
@@ -22,6 +23,7 @@
 <script src="./game/screen.js"></script>
 <script src="./game/tilemap.js"></script>
 <script src="./game/room.js"></script>
+<script src="./game/world-generator.js"></script>
 <script src="./game/camera.js"></script>
 <script src="./game/input.js"></script>
 <script>
@@ -139,7 +141,7 @@
             new Room(
                 0,
                 0,
-                tileSize * 50,
+                tileSize * 100,
                 tileSize * 50,
                 [
                     // new Box(-Screen.main.width / 8, 0, Screen.main.width / 4, Screen.main.height / 4),
@@ -235,6 +237,11 @@
         update(dt = 0) {
             if (loading > 0) return;
             if (!itemsSpawned) {
+                for (const room of World.rooms) {
+                    WorldGenerator.generate(room.TileMap, Math.floor((room.TileMap.map[0].length - 1) / 2));
+                    room.TileMap.optimizeColliders();
+                };
+
                 itemsSpawned = true;
                 HumanInventory = new HumanInventorySkeleton(0, 0, 10);
 
@@ -249,12 +256,11 @@
 
                 for (let i = 0; i < 1; i++) {
                     spawnItem('Sword', 100, 100);
-                    // spawnItem('Sword', 150, 100);
-                    // spawnItem('Sword', 400, 100);
-                    // spawnItem('Mask', 200, 100);
-                    // spawnItem('Shirt', 250, 100);
-                    // spawnItem('Helm', 300, 100);
-                    // spawnItem('Gloves', 350, 100);
+                    spawnItem('Sword', 150, 100);
+                    spawnItem('Mask', 200, 100);
+                    spawnItem('Shirt', 250, 100);
+                    spawnItem('Helm', 300, 100);
+                    spawnItem('Gloves', 350, 100);
                 };
 
                 World.rooms[0].addGeometry('character', new Chest(500, 100, 4));

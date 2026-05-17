@@ -281,11 +281,11 @@ const Screen = {
         // ctx.font = '16px Arial'
         // ctx.fillText(waterInstance.amount, x + tileSize / 2, y + tileSize / 2);
 
-        if (waterInstance.amount) {
-            ctx.strokeStyle = 'blue';
-            ctx.strokeRect(waterInstance.x, waterInstance.y, waterInstance.width, waterInstance.height);
-            // this.renderBox(waterInstance);
-        };
+        // if (waterInstance.amount) {
+        //     ctx.strokeStyle = 'blue';
+        //     ctx.strokeRect(waterInstance.x, waterInstance.y, waterInstance.width, waterInstance.height);
+        //     // this.renderBox(waterInstance);
+        // };
         // if (!tileMap.map[x][y].image) {
         //     continue;
         // };

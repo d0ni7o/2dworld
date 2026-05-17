@@ -5,6 +5,7 @@ const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
 const startLoading = (name) => { console.log(`START LOADING ${name}`); loading++ };
 const stopLoading = (name) => { console.log(`STOP LOADING ${name}`); loading-- };
 const randomEl = (array) => array[Math.floor(Math.random() * array.length)];
+const randomInt = (max, min = 0) => Math.floor(Math.random() * (max - min)) + min;
 
 
 const spawnCircle = function (x, y, radius = minCircleSize + Math.floor(Math.random() * maxCircleSize)) {

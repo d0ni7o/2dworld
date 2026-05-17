@@ -25,7 +25,7 @@ class WaterInstance {
         this.flowT = 0;
         this.splitT = 0;
         this.lastFlowT = 0;
-        this.stagnationLimit = 10 + Math.random() * 11;
+        this.stagnationLimit = 10 + randomInt(10);
 
         this.dx = 0;
         this.dy = 0;
@@ -127,7 +127,7 @@ class WaterInstance {
         this.flowT += dt;
         this.lastFlowT += dt;
         const speed = 0;//Math.sqrt(Math.pow(this.dx, 2) + Math.pow(this.dy, 2));
-        if (this.flowT < (FLOW_TICK_S) / (1 + speed)) return;
+        if ((this.flowT < (FLOW_TICK_S) / (1 + speed))/* && !this.tile.waterSource*/) return;
         if(this.lastFlowT > (this.stagnationLimit) && this.amount > 0 && this.amount <= this.getWaterCapacity() / 2) {
             this.lastFlowT = 0;
             this.amount--;

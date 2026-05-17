@@ -57,7 +57,27 @@ const Physics = {
         return true;
     },
     checkEntityBoxBox2(dt, entityBox, box) {
+        const intersectionMinX = Math.max(entityBox.AB.p0.x, box.AB.p0.x);
+        const intersectionMaxX = Math.min(entityBox.AB.p.x, box.AB.p.x);
+        const intersectionMinY = Math.max(entityBox.BC.p0.y, box.BC.p0.y);
+        const intersectionMaxY = Math.min(entityBox.BC.p.y, box.BC.p.y);
+        const intersectionWidth = Math.max(0, intersectionMaxX - intersectionMinX);
+        const intersectionHeight = Math.max(0, intersectionMaxY - intersectionMinY);
 
+        if (intersectionWidth < intersectionHeight || entityBox.Floor.collision || entityBox.Ceiling.collision) {
+            entityBox.x -= intersectionWidth * Math.sign(entityBox.x - entityBox.lastX);
+            entityBox.updateGeometry();
+            entityBox.dx = 0;
+            return true;
+        } else {
+            entityBox.y -= intersectionHeight * Math.sign(entityBox.y - entityBox.lastY);
+            entityBox.updateGeometry();
+            entityBox.dy = 0;
+            if(Math.sign(entityBox.y - entityBox.lastY) > 0) {
+                entityBox.Floor.collision = true;
+            };
+            return true;
+        };
     },
     checkEntityBoxBox(dt, entityBox, box) {
         const intersectionMinX = Math.max(entityBox.AB.p0.x, box.AB.p0.x);
@@ -71,6 +91,7 @@ const Physics = {
             entityBox.x -= intersectionWidth * Math.sign(box.x - entityBox.x);
             entityBox.updateGeometry();
             entityBox.dx = 0;
+            return true;
         } else {
             entityBox.y -= intersectionHeight * Math.sign(box.y - entityBox.y);
             entityBox.updateGeometry();
@@ -78,6 +99,7 @@ const Physics = {
             if(Math.sign(box.y - entityBox.y) > 0) {
                 entityBox.Floor.collision = true;
             };
+            return true;
         };
 
         // Physics.checkEntityBoxRamp2(dt, entityBox, box.BC, entityBox.Right.id);

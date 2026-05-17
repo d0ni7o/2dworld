@@ -262,20 +262,27 @@ class Room {
 
             this.water.instances = this.water.instances.sort((a, b) => a.amount - b.amount);
             for (let i = 0; i < this.water.instances.length; i++) {
+                // if (this.water.instances[i].tile.waterSink) {
+                //     this.water.instances[i].amount = 0;
+                // } else if (this.water.instances[i].tile.waterSource) {
+                //     this.water.instances[i].amount = this.water.instances[i].getWaterCapacity();
+                // };
                 if (!this.water.instances[i].amount) continue;
                 this.water.instances[i].flow(dt);
                 if (!this.water.instances[i].amount) continue;
                 if (!this.water.instances[i]) continue;
                 for (let j = 0; j < this.entityBoxes.length; j++) {
                     if (!this.water.instances[i].amount) continue;
-                    if (Physics.checkBoxBox(this.entityBoxes[j], this.water.instances[i].getCollider())) {
+                    const waterCollider = this.water.instances[i].getCollider();
+                    if (!waterCollider) continue;
+                    if (Physics.checkBoxBox(this.entityBoxes[j], waterCollider)) {
                         const dx = this.entityBoxes[j].x - this.entityBoxes[j].lastX;
                         const dy = this.entityBoxes[j].y - this.entityBoxes[j].lastY;
 
                         const waterDy = this.entityBoxes[j].y - this.water.instances[i].tile.y * tileSize;
 
-                        this.entityBoxes[j].x += this.water.instances[i].dx * this.water.instances[i].amount * dt * 11;
-                        this.entityBoxes[j].y += this.water.instances[i].dy * this.water.instances[i].amount * dt * 11;
+                        this.entityBoxes[j].x += this.water.instances[i].dx * this.water.instances[i].amount * dt * 20;
+                        this.entityBoxes[j].y += this.water.instances[i].dy * this.water.instances[i].amount * dt * 20;
                         this.entityBoxes[j].lastX = this.entityBoxes[j].x;
                         this.entityBoxes[j].lastY = this.entityBoxes[j].y;
 
@@ -289,41 +296,62 @@ class Room {
                     };
                 };
             };
-
-            this.totalDt += dt;
-            if (this.totalDt > FLOW_TICK_S * 2 && !Player.stopTestWater) {
-                this.totalDt = 0;
-                this.water.addWaterInstance(
-                    this.TileMap.map[
-                    Math.floor(Math.random() * this.TileMap.map.length)
-                    ][
-                    Math.floor(0)
-                    ]
-                );
-                // this.water.addWaterInstance(
-                //     this.TileMap.map[
-                //     Math.floor((this.TileMap.map.length - 1) / 2)
-                //     ][
-                //     Math.floor((this.TileMap.map[0].length - 1 - 2))
-                //     ]
-                // );
-                // this.water.addWaterInstance(
-                //     this.TileMap.map[
-                //     -1 + Math.floor((this.TileMap.map.length) / 2)
-                //     ][
-                //     Math.floor((this.TileMap.map[0].length - 1 - 2))
-                //     ]
-                // );
-                // this.water.addWaterInstance(
-                //     this.TileMap.map[
-                //     1 + Math.floor((this.TileMap.map.length) / 2)
-                //     ][
-                //     Math.floor((this.TileMap.map[0].length - 1 - 2))
-                //     ]
-                // );
+            for (let i = 0; i < this.water.instances.length; i++) {
+                if (this.water.instances[i].tile.waterSink) {
+                    this.water.instances[i].amount = Math.max(0, this.water.instances[i].amount - 1);
+                } else if (this.water.instances[i].tile.waterSource) {
+                    this.water.instances[i].amount = this.water.instances[i].getWaterCapacity();
+                };
             };
-            this.TileMap.map[0][this.TileMap.map[0].length - 1].waterInstance.amount = Math.max(0, this.TileMap.map[0][this.TileMap.map[0].length - 1].waterInstance.amount - 7);
-            this.TileMap.map[this.TileMap.map.length - 1][this.TileMap.map[0].length - 1].waterInstance.amount = Math.max(0, this.TileMap.map[this.TileMap.map.length - 1][this.TileMap.map[0].length - 1].waterInstance.amount - 7);
+
+            for (const entityBox of this.entityBoxes) {
+                const tileX = Math.floor((entityBox.x - this.x + this.width / 2) / tileSize);
+                const tileY = Math.floor((entityBox.y - this.y + this.height / 2) / tileSize);
+                const tile = this.TileMap.getTile(tileX, tileY);
+                if (!tile) continue;
+                if (this.TileMap.map[tileX][tileY].boxCollider) {
+                    if (Physics.checkEntityBoxBox2(dt, entityBox, this.TileMap.map[tileX][tileY].boxCollider)) {
+                        this.TileMap.map[tileX][tileY].image = null;
+                        this.TileMap.map[tileX][tileY].imageIndex = -1;
+                        this.TileMap.optimizeColliders();
+                    };
+                };
+            };
+
+            // this.totalDt += dt;
+            // if (this.totalDt > FLOW_TICK_S * 2 && !Player.stopTestWater) {
+            //     this.totalDt = 0;
+            //     this.water.addWaterInstance(
+            //         this.TileMap.map[
+            //         Math.floor(Math.random() * this.TileMap.map.length)
+            //         ][
+            //         Math.floor(0)
+            //         ]
+            //     );
+            //     // this.water.addWaterInstance(
+            //     //     this.TileMap.map[
+            //     //     Math.floor((this.TileMap.map.length - 1) / 2)
+            //     //     ][
+            //     //     Math.floor((this.TileMap.map[0].length - 1 - 2))
+            //     //     ]
+            //     // );
+            //     // this.water.addWaterInstance(
+            //     //     this.TileMap.map[
+            //     //     -1 + Math.floor((this.TileMap.map.length) / 2)
+            //     //     ][
+            //     //     Math.floor((this.TileMap.map[0].length - 1 - 2))
+            //     //     ]
+            //     // );
+            //     // this.water.addWaterInstance(
+            //     //     this.TileMap.map[
+            //     //     1 + Math.floor((this.TileMap.map.length) / 2)
+            //     //     ][
+            //     //     Math.floor((this.TileMap.map[0].length - 1 - 2))
+            //     //     ]
+            //     // );
+            // };
+            // this.TileMap.map[0][this.TileMap.map[0].length - 1].waterInstance.amount = Math.max(0, this.TileMap.map[0][this.TileMap.map[0].length - 1].waterInstance.amount - 7);
+            // this.TileMap.map[this.TileMap.map.length - 1][this.TileMap.map[0].length - 1].waterInstance.amount = Math.max(0, this.TileMap.map[this.TileMap.map.length - 1][this.TileMap.map[0].length - 1].waterInstance.amount - 7);
 
             /** ANIMATE ? */
             // for (const entityBox of this.entityBoxes) {

@@ -143,7 +143,7 @@ window.addEventListener('keyup', function (event) {
     };
 });
 
-const inputForce = 300;
+const inputForce = 300 * 3;
 const jumpForce = 700;
 const handleInput = function () {
     if (Keys.KeyD) {
@@ -162,13 +162,13 @@ const handleInput = function () {
             Player.entityBox.jumping = true;
         };
         if (Player.entityBox.waterCollision) {
-            Player.entityBox.dy -= jumpForce / 25;
+            Player.entityBox.dy -= jumpForce / 50;
             // Player.entityBox.jumping = true;
         };
     };
     if (Keys.KeyS) {
         if (Player.entityBox.waterCollision) {
-            Player.entityBox.dy += jumpForce / 25;
+            Player.entityBox.dy += jumpForce / 50;
             // Player.entityBox.jumping = true;
         };
     };
