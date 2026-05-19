@@ -143,7 +143,7 @@ window.addEventListener('keyup', function (event) {
     };
 });
 
-const inputForce = 300 * 3;
+const inputForce = 300;
 const jumpForce = 700;
 const handleInput = function () {
     if (Keys.KeyD) {

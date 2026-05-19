@@ -238,7 +238,7 @@
             if (loading > 0) return;
             if (!itemsSpawned) {
                 for (const room of World.rooms) {
-                    WorldGenerator.generate(room.TileMap, Math.floor((room.TileMap.map[0].length - 1) / 2));
+                    WorldGenerator.generate(room.TileMap, Math.floor(0 + 1 * (room.TileMap.map[0].length - 1) / 2));
                     room.TileMap.optimizeColliders();
                 };
 

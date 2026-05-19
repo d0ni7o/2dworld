@@ -281,8 +281,8 @@ class Room {
 
                         const waterDy = this.entityBoxes[j].y - this.water.instances[i].tile.y * tileSize;
 
-                        this.entityBoxes[j].x += this.water.instances[i].dx * this.water.instances[i].amount * dt * 20;
-                        this.entityBoxes[j].y += this.water.instances[i].dy * this.water.instances[i].amount * dt * 20;
+                        this.entityBoxes[j].dx += this.water.instances[i].dx * this.water.instances[i].amount * dt * 2000;
+                        this.entityBoxes[j].dy += this.water.instances[i].dy * this.water.instances[i].amount * dt * 2000;
                         this.entityBoxes[j].lastX = this.entityBoxes[j].x;
                         this.entityBoxes[j].lastY = this.entityBoxes[j].y;
 
