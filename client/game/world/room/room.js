@@ -1,7 +1,12 @@
-let rendered = false;
+import { TileMap, tileSize } from "../tilemap/tilemap.js";
+import { Water } from "../fluids/water.js";
+import { Vector } from "../../physics/geometry.js";
+import { gForce, Physics } from "../../physics/physics.js";
+import { MAX_WATER_PER_TILE } from "../fluids/water.js";
 
-class Room {
+export class Room {
     constructor(
+        World,
         x,
         y,
         width,
@@ -11,6 +16,7 @@ class Room {
         entityBoxes = [],
         doors = []
     ) {
+        this.World = World;
         this.x = x;
         this.y = y;
         this.width = width;
@@ -142,7 +148,7 @@ class Room {
     update(dt) {
         dt = dt || 0;
 
-        if (!pausePhysics) {
+        if (!this.World.Game.Input.pausePhysics) {
             this.rays = [];
             this.points = [];
 
@@ -281,13 +287,16 @@ class Room {
 
                         const waterDy = this.entityBoxes[j].y - this.water.instances[i].tile.y * tileSize;
 
-                        this.entityBoxes[j].dx += this.water.instances[i].dx * this.water.instances[i].amount * dt * 2000;
-                        this.entityBoxes[j].dy += this.water.instances[i].dy * this.water.instances[i].amount * dt * 2000;
+                        this.entityBoxes[j].dx += this.water.instances[i].dx * this.water.instances[i].amount * dt * 1000;
+                        this.entityBoxes[j].dy += this.water.instances[i].dy * this.water.instances[i].amount * dt * 1000;
                         this.entityBoxes[j].lastX = this.entityBoxes[j].x;
                         this.entityBoxes[j].lastY = this.entityBoxes[j].y;
 
 
                         if (this.entityBoxes[j].waterCollision) continue;
+                        if (this.entityBoxes[j].skeleton?.character?.Stats?.Breath && this.water.instances[i].amount == MAX_WATER_PER_TILE) {
+                            this.entityBoxes[j].skeleton.character.Stats.Breath.update(-20 * dt, dt);
+                        };
                         this.entityBoxes[j].waterCollision = true;
                         this.entityBoxes[j].ddy -= 1.1 * (this.gForce || gForce) * (Math.min(MAX_WATER_PER_TILE - 1, this.water.instances[i].amount)) / (MAX_WATER_PER_TILE - 1);
                         if (dy > dt * 600) {
@@ -313,7 +322,8 @@ class Room {
                     if (Physics.checkEntityBoxBox2(dt, entityBox, this.TileMap.map[tileX][tileY].boxCollider)) {
                         this.TileMap.map[tileX][tileY].image = null;
                         this.TileMap.map[tileX][tileY].imageIndex = -1;
-                        this.TileMap.optimizeColliders();
+                        this.TileMap.updateColliders(this.TileMap.map[tileX][tileY]);
+                        // this.TileMap.optimizeColliders();
                     };
                 };
             };
@@ -359,80 +369,77 @@ class Room {
             // };
         };
 
-        TestCamera.updatePos(dt);
+        this.World.Game.MainCamera.updatePos(dt);
     };
 
     render() {
-        if (!rendered) {
-            console.log(`FIRST RENDER`);
-            rendered = true;
-        };
-        // Screen.ctx.clearRect(0, 0, Screen.main.width, Screen.main.height);
-        Screen.cameraCtx.clearRect(0, 0, Screen.cameraView.width, Screen.cameraView.height);
+        // this.World.Game.Screen.ctx.clearRect(0, 0, this.World.Game.Screen.main.width, this.World.Game.Screen.main.height);
+        this.World.Game.Screen.cameraCtx.clearRect(0, 0, this.World.Game.Screen.cameraView.width, this.World.Game.Screen.cameraView.height);
 
         for (const column of this.TileMap.map) {
             for (const tile of column) {
-                if (TestCamera.checkBoxRender({ x: tile.Position.x, y: tile.Position.y, width: tileSize, height: tileSize })) {
-                    Screen.renderTile(TestCamera.getTileImage(tile), this.TileMap, Screen.cameraCtx);
+                if (this.World.Game.MainCamera.checkBoxRender({ x: tile.Position.x, y: tile.Position.y, width: tileSize, height: tileSize })) {
+                    this.World.Game.Screen.renderTile(this.World.Game.MainCamera.getTileImage(tile), this.TileMap, this.World.Game.Screen.cameraCtx);
                 };
             };
         };
 
-        Screen.renderMouse(Screen.cameraCtx);
+        this.World.Game.Screen.renderMouse(this.World.Game.Screen.cameraCtx);
 
         for (const box of this.boxes) {
-            if (TestCamera.checkBoxRender(box)) {
-                Screen.renderBox(TestCamera.getBoxImage(box), Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkBoxRender(box)) {
+                this.World.Game.Screen.renderBox(this.World.Game.MainCamera.getBoxImage(box), this.World.Game.Screen.cameraCtx);
             };
         };
         for (const circle of this.circles) {
-            Screen.renderCircle(circle);
+            this.World.Game.Screen.renderCircle(circle);
         };
         for (const ramp of this.ramps) {
-            if (TestCamera.checkRayRender(ramp)) {
-                Screen.renderRay(TestCamera.getRayImage(ramp), Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkRayRender(ramp)) {
+                this.World.Game.Screen.renderRay(this.World.Game.MainCamera.getRayImage(ramp), this.World.Game.Screen.cameraCtx);
             };
         };
         for (const entityBox of this.entityBoxes) {
-            if (TestCamera.checkBoxRender(entityBox)) {
-                Screen.renderEntityBox(TestCamera.getBoxImage(entityBox), Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkBoxRender(entityBox)) {
+                this.World.Game.Screen.renderEntityBox(this.World.Game.MainCamera.getBoxImage(entityBox), this.World.Game.Screen.cameraCtx);
             };
         };
         for (const hitbox of this.hitBoxes) {
-            if (TestCamera.checkBoxRender(hitbox)) {
-                Screen.renderBox(TestCamera.getBoxImage(hitbox), Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkBoxRender(hitbox)) {
+                this.World.Game.Screen.renderBox(this.World.Game.MainCamera.getBoxImage(hitbox), this.World.Game.Screen.cameraCtx);
             };
         };
         for (const door of this.doors) {
-            if (TestCamera.checkBoxRender(door)) {
-                Screen.renderBox(TestCamera.getBoxImage(door), Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkBoxRender(door)) {
+                this.World.Game.Screen.renderBox(this.World.Game.MainCamera.getBoxImage(door), this.World.Game.Screen.cameraCtx);
             };
         };
         // for (const character of this.characters) {
-        //     Screen.renderSkeleton(character.skeleton);
+        //     this.World.Game.Screen.renderSkeleton(character.skeleton);
         // };
         for (const character of this.characters) {
-            if (TestCamera.checkBoxRender(character.skeleton.Controller)) {
-                Screen.renderSkeleton(character.skeleton, Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkBoxRender(character.skeleton.Controller)) {
+                this.World.Game.Screen.renderSkeleton(character.skeleton, this.World.Game.Screen.cameraCtx);
+                this.World.Game.Screen.renderHp(character, this.World.Game.Screen.cameraCtx);
             };
         };
         for (const waterInstance of this.water.instances) {
             waterInstance.updateDimensions();
-            if (TestCamera.checkWaterRender(waterInstance)) {
-                Screen.renderWaterInstance(TestCamera.getWaterImage(waterInstance), Screen.cameraCtx);
+            if (this.World.Game.MainCamera.checkWaterRender(waterInstance)) {
+                this.World.Game.Screen.renderWaterInstance(this.World.Game.MainCamera.getWaterImage(waterInstance), this.World.Game.Screen.cameraCtx);
             };
 
         };
-        // Screen.renderWater(this.water);
+        // this.World.Game.Screen.renderWater(this.water);
         // for (const ray of this.rays) {
-        //     Screen.renderRay(ray);
+        //     this.World.Game.Screen.renderRay(ray);
         // };
         // for (const point of this.points) {
-        //     Screen.renderCircle({ color: 'red', radius: 10, ...point });
+        //     this.World.Game.Screen.renderCircle({ color: 'red', radius: 10, ...point });
         // };
 
-        // TestCamera.updateView();
-        // TestCamera.render();
+        // this.World.Game.MainCamera.updateView();
+        // this.World.Game.MainCamera.render();
     };
 
     gravity(entity) {

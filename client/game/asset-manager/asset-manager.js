@@ -1,3 +1,5 @@
+import { Ajax } from "../networking/ajax.js";
+
 const SPRITESHEET_DIMENSIONS = {
     frameWidth: 10,
 };
@@ -17,7 +19,7 @@ class SpriteSheetFrame {
 
 const loadedSpriteSheets = {};
 
-const AssetManager = {
+export const AssetManager = {
     async loadImage(id, source, loadDimensions = false) {
         return new Promise(async (resolve, reject) => {
             if (document.getElementById(id)) {

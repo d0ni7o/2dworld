@@ -1,3 +1,6 @@
+import { randomInt } from "../utils/utils.js";
+import { TileSets } from "../world/tilemap/tilemap.js";
+
 // Fade function as defined by Ken Perlin
 function fade(t) {
     return t * t * t * (t * (t * 6 - 15) + 10);
@@ -9,7 +12,7 @@ function lerp(a, b, t) {
 }
 
 // 1D Perlin Noise Function
-function perlin1D(x, maxRng = 2) {
+export function perlin1D(x, maxRng = 2) {
     let x0 = Math.floor(x); // Left integer bound
     let x1 = x0 + 1;        // Right integer bound
 
@@ -40,7 +43,7 @@ function grad(hash, x, y) {
 const p = new Array(256).fill(0).map((_, i) => i).sort((a, b) => Math.random() - 0.5);
 
 
-function perlin(x, y) {
+export function perlin(x, y) {
     const X = Math.floor(x) & 255;
     const Y = Math.floor(y) & 255;
 

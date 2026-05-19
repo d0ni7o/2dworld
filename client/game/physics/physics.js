@@ -1,10 +1,13 @@
-const oobBounce = 0.7;
-const gForce = 2000;
+import { getRayIntersectionPoint, Vector } from "./geometry.js";
+import { entityBoxDirectionOffsets } from "../entities/entities.js";
+
+export const oobBounce = 0.7;
+export const gForce = 2000;
 
 let rays = [];
 let points = [];
 
-const Physics = {
+export const Physics = {
     checkBoxBox(box1, box2) {
         const dx = box1.x - box2.x;
         const wMeet = (box1.width + box2.width) / 2;

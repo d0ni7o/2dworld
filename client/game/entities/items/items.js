@@ -1,4 +1,10 @@
-class Attachment extends EntityBox {
+import { EntityBox } from "../entities.js";
+import { AnimationSets } from "../../animation/animation.js";
+import { SwordAttack } from "../../animation/attacks/attacks.js";
+import { Animator } from "../../animation/animation.js";
+import { clamp } from "../../utils/utils.js";
+
+export class Attachment extends EntityBox {
     constructor(scale, name, animationSet, init) {
         super(init.x || 0, init.y || 0, init.width * scale, init.height * scale, init.rotation || 0, init.color || 'blue');
 
@@ -30,6 +36,10 @@ class Attachment extends EntityBox {
 
         if (init.interactable) {
             this.interactable = init.interactable.bind(this);
+        };
+
+        if(ITEM[this.name].init.onUse) {
+            this.onUse = ITEM[this.name].init.onUse.bind(this);
         };
     };
 
@@ -182,6 +192,18 @@ class ItemDefinition {
 };
 
 const ITEM = {
+    Apple: new ItemDefinition('Apple', AnimationSets.Apple, {
+        width: 14,
+        height: 14,
+        scale: 2,
+        onUse: function(character) {
+            console.log(`EAT APPLE?`);
+            this.currentInventorySlot.item = null;
+            character.Stats.Hp.update(20);
+            character.skeleton.Controller.room.entityBoxes = character.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != this.id);
+            character.inventory.removeItem(this.id);
+        },
+    }),
     Sword: new ItemDefinition('Sword', AnimationSets.Sword, {
         width: 27,
         height: 11,
@@ -288,10 +310,10 @@ const ITEM = {
     }),
 };
 
-const spawnItem = function (name, x, y, room = Player.entityBox.room) {
+export const spawnItem = function (name, x, y, room) {
     const itemDef = ITEM[name];
     if (!itemDef) return;
-    const newItem = new Attachment(4, name, itemDef.animationSet, {
+    const newItem = new Attachment(itemDef.init.scale || 4, name, itemDef.animationSet, {
         x,
         y,
         width: itemDef.init.width,

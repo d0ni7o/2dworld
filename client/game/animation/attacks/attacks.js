@@ -1,4 +1,5 @@
-
+import { HitBox } from "../../entities/entities.js";
+import { getId } from "../../utils/utils.js";
 class Attack {
     constructor(Owner, dx = 0, dy = 0, hitboxes = [], durationFrames = 20) {
         this.id = getId();
@@ -94,7 +95,7 @@ class Thrust1 extends Attack {
     }
 };
 
-class SwordAttack extends Attack {
+export class SwordAttack extends Attack {
     constructor(Owner, dx) {
         super(
             Owner,
@@ -180,5 +181,9 @@ class SwordAttack extends Attack {
         this.Owner.physOffsetY = 0;
     }
 
-    onCollision(dt, entityBox) { }
+    onCollision(dt, entityBox, hitBox) {
+        if(!entityBox.skeleton?.character?.Stats?.Hp || entityBox.skeleton?.Controller.id == this.Owner.parent.skeleton.Controller.id) return;
+        if(hitBox.targets.some(({ id }) => id == entityBox.id)) return;
+        entityBox.skeleton.character.Stats.Hp.update(-10);
+    }
 };

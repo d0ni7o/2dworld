@@ -1,4 +1,9 @@
-class Bone extends EntityBox {
+import { EntityBox } from "../../entities/entities.js";
+import { AnimationSets, Animator } from "../animation.js";
+import { clamp } from "../../utils/utils.js";
+import { Inventory } from "../../entities/characters/character.js";
+
+export class Bone extends EntityBox {
     constructor(
         animationSet,
         parent,
@@ -343,7 +348,7 @@ class Skeleton {
 
 let testTorsoAngle = Math.PI;
 const breathingScale = 1.2;
-class HumanSkeleton extends Skeleton {
+export class HumanSkeleton extends Skeleton {
     constructor(x, y, scale) {
         const Controller = new Bone(null, null, { width: 30, height: 60, x, y });
         const Torso = new Bone(AnimationSets.Torso, {
@@ -833,7 +838,7 @@ class HumanSkeleton extends Skeleton {
     };
 };
 
-class HumanInventorySkeleton extends HumanSkeleton {
+export class HumanInventorySkeleton extends HumanSkeleton {
     constructor(x, y, scale) {
         super(x, y, scale);
 
@@ -939,7 +944,7 @@ class HumanInventorySkeleton extends HumanSkeleton {
         }
     };
 
-    handleInventoryInput() {
+    handleInventoryInput(Input) {
         if (!this.selectedSlot && !this.targetSlot) {
             return;
         };
@@ -953,15 +958,22 @@ class HumanInventorySkeleton extends HumanSkeleton {
             return;
         };
 
+        console.log(Input, this.selectedSlot, this.targetSlot);
 
         const dropItem = !this.targetSlot;
         if (dropItem) {
             this.selectedSlot.item.unRotate();
             if (this.selectedSlot.item.currentInventorySlot) {
                 this.selectedSlot.item.currentInventorySlot.item = null;
-                this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton.Controller.room.entityBoxes.push(this.selectedSlot.item);
-                this.selectedSlot.item.x = this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton.Controller.x;
-                this.selectedSlot.item.y = this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton.Controller.y;
+                if (this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton) {
+                    this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton.Controller.room.entityBoxes.push(this.selectedSlot.item);
+                    this.selectedSlot.item.x = this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton.Controller.x;
+                    this.selectedSlot.item.y = this.selectedSlot.item.currentInventorySlot.inventory.character.skeleton.Controller.y;
+                } else {
+                    Input.Player.entityBox.room.entityBoxes.push(this.selectedSlot.item);
+                    this.selectedSlot.item.x = Input.Player.entityBox.x;
+                    this.selectedSlot.item.y = Input.Player.entityBox.y;
+                };
                 this.selectedSlot.item.currentInventorySlot = null;
                 this.selectedSlot.item.updateGeometry();
             } else {
@@ -973,7 +985,7 @@ class HumanInventorySkeleton extends HumanSkeleton {
             };
 
             if (this.selectedSlot.item.skeleton) {
-                Player.entityBox.room.characters.push(this.selectedSlot.item.skeleton.character);
+                Input.Player.entityBox.room.characters.push(this.selectedSlot.item.skeleton.character);
             };
             // this.selectedSlot.item.flipX = false;
             this.selectedSlot = null;
@@ -1022,7 +1034,7 @@ class HumanInventorySkeleton extends HumanSkeleton {
     };
 };
 
-const CONTEXT_MENU = {
+export const CONTEXT_MENU = {
     name: 'CONTEXT_MENU_NAME',
     options: [],
     render: false,
@@ -1034,7 +1046,7 @@ const CONTEXT_MENU = {
     range: 100,
 };
 
-const ITEM_INVENTORY = {
+export const ITEM_INVENTORY = {
     name: 'ITEM_INVENTORY',
     target: null,
     render: false,
@@ -1049,7 +1061,27 @@ const ITEM_INVENTORY = {
     range: 100,
 };
 
-class ChestSkeleton extends Skeleton {
+
+export const HOTBAR = {
+    name: 'HOTBAR',
+    render: true,
+    slots: 5,
+    targetSlot: null,
+    addItem: function (item, slotIndex) {
+        HOTBAR.slots[slotIndex] = item;
+    },
+    removeItem: function (slotIndex) {
+        HOTBAR.slots[slotIndex] = null;
+    },
+    activate: function (slotIndex) {
+        if (!HOTBAR.slots[slotIndex]) return;
+
+        HOTBAR.slots[slotIndex].use();
+    },
+};
+export const HotbarInventory = new Inventory(HOTBAR, HOTBAR.slots);
+
+export class ChestSkeleton extends Skeleton {
     constructor(x, y, scale) {
         const Controller = new Bone(AnimationSets.Chest, null, {
             width: 9 * scale,

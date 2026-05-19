@@ -1,4 +1,7 @@
-const intersects = function (a, b, c, d, p, q, r, s) {
+import { getId } from "../utils/utils.js";
+import { tileSize } from "../world/tilemap/tilemap.js";
+
+export const intersects = function (a, b, c, d, p, q, r, s) {
     let det, gamma, lambda;
     det = (c - a) * (s - q) - (r - p) * (d - b);
     if (det === 0) {
@@ -9,10 +12,10 @@ const intersects = function (a, b, c, d, p, q, r, s) {
         return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
     };
 };
-const linesCross = function (V1, V2) {
+export const linesCross = function (V1, V2) {
     return intersects(V1.p0.x, V1.p0.y, V1.p.x, V1.p.y, V2.p0.x, V2.p0.y, V2.p.x, V2.p.y);
 };
-const intersectionPoint = function (x3, y3, x4, y4, x1, y1, x2, y2) {
+export const intersectionPoint = function (x3, y3, x4, y4, x1, y1, x2, y2) {
     const a1 = { x: x3, y: y3 };
     const a2 = { x: x4, y: y4 };
     const b1 = { x: x1, y: y1 };
@@ -32,10 +35,10 @@ const intersectionPoint = function (x3, y3, x4, y4, x1, y1, x2, y2) {
     };
     return false;
 };
-const getRayIntersectionPoint = function (V1, V2) {
+export const getRayIntersectionPoint = function (V1, V2) {
     return intersectionPoint(V1.p0.x, V1.p0.y, V1.p.x, V1.p.y, V2.p0.x, V2.p0.y, V2.p.x, V2.p.y)
 };
-class Vector {
+export class Vector {
     constructor(x0, y0, x1, y1, color) {
         this.id = getId();
         this.p0 = {
@@ -64,7 +67,7 @@ class Vector {
         return Math.atan(tan);
     };
 };
-class Circle {
+export class Circle {
     constructor(x, y, radius = minCircleSize, color) {
         this.x = x;
         this.y = y;
@@ -100,7 +103,7 @@ class Circle {
         this.dy *= this.airResistance;
     };
 };
-class Box {
+export class Box {
     constructor(x, y, width = 10, height = 10, rotation, color, isStatic = true) {
         this.id = getId();
         this.x = x;

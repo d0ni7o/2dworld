@@ -1,3 +1,6 @@
+import { startLoading, stopLoading } from "../utils/utils.js";
+import { AssetManager } from "../asset-manager/asset-manager.js";
+
 const DEFAULT_ANIMATION_THRESHOLD_S = 0.15;
 
 class AnimationSet {
@@ -46,7 +49,7 @@ class AnimationSet {
     };
 };
 
-class Animator {
+export class Animator {
     constructor(animationSet, bone) {
         this.currentFrame = 0;
         this.prevFrame = this.currentFrame;
@@ -107,7 +110,7 @@ class Animator {
     };
 }
 
-const AnimationSets = {
+export const AnimationSets = {
     Chest: new AnimationSet('./assets/animations/Chest/base/chest_0001.png', 'Chest', {
         animations: {
             base: { path: 'assets/animations/Chest/base' },
@@ -175,13 +178,13 @@ const AnimationSets = {
     Shirt: new AnimationSet('./assets/shirt.png', 'Shirt'),
     Helm: new AnimationSet('./assets/helm.png', 'Helm'),
     Gloves: new AnimationSet('./assets/gloves.png', 'Gloves'),
+    Apple: new AnimationSet('./assets/apple.png', 'Apple'),
 };
 
-const loadAnimationSets = async function () {
+export const loadAnimationSets = async function () {
     startLoading('ANIMATION SETS');
-    for (animationSet of Object.values(AnimationSets)) {
+    for (const animationSet of Object.values(AnimationSets)) {
         await animationSet.load();
     };
     stopLoading('ANIMATION SETS');
 };
-loadAnimationSets();

@@ -1,4 +1,4 @@
-const Ajax = {
+export const Ajax = {
     send(method, url, data, callback, responseType) {
         // console.log(`Ajax.send`,method,url,data);
 

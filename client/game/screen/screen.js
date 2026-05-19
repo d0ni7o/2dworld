@@ -1,6 +1,14 @@
+import { tileSize } from "../world/tilemap/tilemap.js";
+import { CONTEXT_MENU, HOTBAR, HotbarInventory, ITEM_INVENTORY } from "../animation/skeletons/skeleton.js";
+import { clamp } from "../utils/utils.js";
+import { Physics } from "../physics/physics.js";
 
+window.addEventListener('resize', function (event) {
+    Screen.resize();
+    Screen.resize(Screen.cameraView);
+});
 
-const Screen = {
+export const Screen = {
     main: document.getElementById('main'),
     cameraView: document.getElementById('camera-view'),
     setup: function () {
@@ -131,11 +139,11 @@ const Screen = {
         };
     },
     renderMouse: function (ctx = this.cameraCtx) {
-        this.renderCircle({ 
-            x: Mouse.x - TestCamera.x + Screen.cameraView.width / 2,
-            y: Mouse.y - TestCamera.y + Screen.cameraView.height / 2,
-            radius: 10, 
-            color: 'red' 
+        this.renderCircle({
+            x: this.Input.Mouse.x,
+            y: this.Input.Mouse.y,
+            radius: 10,
+            color: 'red'
         }, ctx);
     },
     renderPng: function (Image, ctx = this.ctx) {
@@ -162,6 +170,26 @@ const Screen = {
         );
         ctx.setTransform(1, 0, 0, 1, 0, 0);
     },
+    renderHp(character, ctx = this.cameraCtx) {
+        if (!character.Stats?.Hp) return;
+        const characterController = this.Camera.getBoxImage(character.skeleton.Controller);
+        if (character.Stats.Breath.currentValue < character.Stats.Breath.max) {
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(
+                characterController.x - characterController.width / 2,
+                characterController.y - characterController.height / 2 - tileSize - tileSize / 4,
+                characterController.width * character.Stats.Breath.currentValue / character.Stats.Breath.max,
+                tileSize / 4
+            );
+        };
+        ctx.fillStyle = 'red';
+        ctx.fillRect(
+            characterController.x - characterController.width / 2,
+            characterController.y - characterController.height / 2 - tileSize,
+            characterController.width * character.Stats.Hp.currentValue / character.Stats.Hp.max,
+            tileSize / 4
+        );
+    },
     renderSkeleton(skeleton, ctx = this.ctx) {
         // console.log(`RENDER SKELETON`, skeleton);
 
@@ -170,13 +198,13 @@ const Screen = {
             for (const i of skeleton.reverseRenderIndex) {
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder == 1) {
-                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
+                        this.renderBox(this.Camera.getBoxImage(attachment), ctx);
                     };
                 };
-                this.renderEntityBox(TestCamera.getBoxImage(skeleton.bones[i]), ctx);
+                this.renderEntityBox(this.Camera.getBoxImage(skeleton.bones[i]), ctx);
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder <= 0) {
-                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
+                        this.renderBox(this.Camera.getBoxImage(attachment), ctx);
                     };
                 };
             };
@@ -184,13 +212,13 @@ const Screen = {
             for (const i of skeleton.renderIndex) {
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder == -1) {
-                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
+                        this.renderBox(this.Camera.getBoxImage(attachment), ctx);
                     };
                 };
-                this.renderEntityBox(TestCamera.getBoxImage(skeleton.bones[i]), ctx);
+                this.renderEntityBox(this.Camera.getBoxImage(skeleton.bones[i]), ctx);
                 for (const attachment of skeleton.bones[i].attachments || []) {
                     if (attachment.attachmentOrder >= 0) {
-                        this.renderBox(TestCamera.getBoxImage(attachment), ctx);
+                        this.renderBox(this.Camera.getBoxImage(attachment), ctx);
                     };
                 };
             };
@@ -231,6 +259,7 @@ const Screen = {
         if (!tileMap.map[tile.x][tile.y].image) {
             return;
         };
+        // console.log(`RENDER TILE IMAGE`, tileSize, tileSize);
         Screen.renderPng({
             drawing: tileMap.map[tile.x][tile.y].image,
             x: tile.Position.x,// * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
@@ -310,28 +339,28 @@ const Screen = {
         screen.height = window.innerHeight;
     },
     renderItemInventory: function (item = ITEM_INVENTORY.target, screen = this.cameraView, ctx = this.cameraCtx) {
-        if (!Keys.renderInventory) HumanInventory.targetSlot = null;
+        if (!this.Input.Keys.renderInventory) this.HumanInventory.targetSlot = null;
 
         let slotSelected = false;
         const padding = 5;
-        const totalPaddingWidth = padding * HumanInventory.Torso.width;
+        const totalPaddingWidth = padding * this.HumanInventory.Torso.width;
         const totalPaddingHeight = padding
         const perRow = 5;//item.skeleton.character.inventory.slots.length / 2;
         const nRows = Math.ceil(item.skeleton.character.inventory.slots.length / perRow);
-        const slotSize = HumanInventory.Torso.width;
+        const slotSize = this.HumanInventory.Torso.width;
         const slotSizePadded = (slotSize + padding + 1)
         const iWidth = perRow * slotSizePadded;
         const minX = clamp(
-            item.x - iWidth / 2 + slotSizePadded / 2 - TestCamera.x + Screen.cameraView.width / 2,
+            item.x - iWidth / 2 + slotSizePadded / 2 - this.Camera.x + Screen.cameraView.width / 2,
             slotSize / 2,
             Screen.cameraView.width - iWidth + slotSize / 2
         );
         const minY = clamp(
-            item.y - nRows * slotSize - TestCamera.y + Screen.cameraView.height / 2,
+            item.y - nRows * slotSize - this.Camera.y + Screen.cameraView.height / 2,
             slotSize / 2,
             Screen.cameraView.height - nRows * slotSize + slotSize / 2
         );
-        const slotsY = HumanInventory.maxY + HumanInventory.Torso.width / 2;
+        const slotsY = this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
 
         // for (const i of HumanInventory.renderIndex) {
         //     const coords = {
@@ -406,8 +435,8 @@ const Screen = {
                 color: 'darkgray'
             }, slotSelected);
 
-            if (!HumanInventory.targetSlot && slotSelected) {
-                HumanInventory.targetSlot = {
+            if (!this.HumanInventory.targetSlot && slotSelected) {
+                this.HumanInventory.targetSlot = {
                     isBone: false,
                     name: `${item.id}-${i}`,
                     item: slot.item,
@@ -427,7 +456,7 @@ const Screen = {
         const slotSizePadded = (slotSize + padding + 1)
         const iWidth = perRow * slotSizePadded;
         const minX = clamp(
-            screen.width / 2 - iWidth / 2 + slotSizePadded / 2 - screen.width / 2 + menu.target.x - TestCamera.x + Screen.cameraView.width / 2,
+            screen.width / 2 - iWidth / 2 + slotSizePadded / 2 - screen.width / 2 + menu.target.x - this.Camera.x + Screen.cameraView.width / 2,
             slotSize / 2,
             Screen.cameraView.width - iWidth + slotSize / 2
         );
@@ -440,7 +469,7 @@ const Screen = {
 
             const x = minX + (i % perRow) * slotSizePadded;
             const y = clamp(
-                menu.target.y - menu.target.height - TestCamera.y + Screen.cameraView.height / 2,
+                menu.target.y - menu.target.height - this.Camera.y + Screen.cameraView.height / 2,
                 slotSize / 2,
                 Screen.cameraView.height - slotSizePadded + slotSize / 2
             );
@@ -457,7 +486,7 @@ const Screen = {
             ctx.fillStyle = 'black';
             ctx.fillText(option.name, x - slotSize / 4, y);
 
-            if (!menu.targetOption && slotSelected && mousedown) {
+            if (!menu.targetOption && slotSelected && this.Input.Mouse.down) {
                 menu.targetOption = option;
                 menu.select(option);
                 return;
@@ -465,39 +494,39 @@ const Screen = {
         };
     },
     renderInventory: function (character, screen = this.cameraView, ctx = this.cameraCtx) {
-        HumanInventory.Controller.x = screen.width / 2;
-        HumanInventory.Controller.y = screen.height / 2;
-        HumanInventory.Controller.updateGeometry();
-        HumanInventory.calculateSize();
+        this.HumanInventory.Controller.x = screen.width / 2;
+        this.HumanInventory.Controller.y = screen.height / 2;
+        this.HumanInventory.Controller.updateGeometry();
+        this.HumanInventory.calculateSize();
 
-        HumanInventory.targetSlot = null;
+        this.HumanInventory.targetSlot = null;
         let slotSelected = false;
         const padding = 5;
-        const totalPaddingWidth = padding * HumanInventory.Torso.width;
+        const totalPaddingWidth = padding * this.HumanInventory.Torso.width;
         const totalPaddingHeight = padding
         const perRow = character.inventory.slots.length / 2;
-        const slotSize = HumanInventory.Torso.width;
+        const slotSize = this.HumanInventory.Torso.width;
         const slotSizePadded = (slotSize + padding + 1)
         const iWidth = perRow * slotSizePadded;
-        const minX = HumanInventory.Controller.x - iWidth / 2 + slotSizePadded / 2;
-        const slotsY = HumanInventory.maxY + HumanInventory.Torso.width / 2;
+        const minX = this.HumanInventory.Controller.x - iWidth / 2 + slotSizePadded / 2;
+        const slotsY = this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
 
-        for (const i of HumanInventory.renderIndex) {
+        for (const i of this.HumanInventory.renderIndex) {
             const coords = {
-                x: HumanInventory.bones[i].x,
-                y: HumanInventory.bones[i].y,
+                x: this.HumanInventory.bones[i].x,
+                y: this.HumanInventory.bones[i].y,
                 rotation: 0,
                 flipX: false,
                 offsetX: 0,
                 offsetY: 0,
-                width: HumanInventory.bones[i].width,
-                height: HumanInventory.bones[i].height
+                width: this.HumanInventory.bones[i].width,
+                height: this.HumanInventory.bones[i].height
             };
-            const boneName = HumanInventory.bones[i].animator.animationSet.name;
+            const boneName = this.HumanInventory.bones[i].animator.animationSet.name;
 
-            for (const slotIndex in HumanInventory.Slots[boneName]) {
-                const slotOffsetX = HumanInventory.bones[i].width * HumanInventory.Slots[boneName][slotIndex].parentX;;
-                const slotOffsetY = HumanInventory.bones[i].height * HumanInventory.Slots[boneName][slotIndex].parentY;
+            for (const slotIndex in this.HumanInventory.Slots[boneName]) {
+                const slotOffsetX = this.HumanInventory.bones[i].width * this.HumanInventory.Slots[boneName][slotIndex].parentX;;
+                const slotOffsetY = this.HumanInventory.bones[i].height * this.HumanInventory.Slots[boneName][slotIndex].parentY;
 
                 const attachment = character.skeleton.bones[i].getChild((bone) => {
                     if (bone.parent.id != character.skeleton.bones[i].id) return false;
@@ -510,25 +539,25 @@ const Screen = {
                 this.renderEntityBox({
                     ...character.skeleton.bones[i],
                     ...coords,
-                    animator: { ...character.skeleton.bones[i].animator, image: HumanInventory.bones[i].animator.image },
-                    x: HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
-                    y: HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
+                    animator: { ...character.skeleton.bones[i].animator, image: this.HumanInventory.bones[i].animator.image },
+                    x: this.HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
+                    y: this.HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
                 }, ctx);
 
 
                 slotSelected = this.renderInventorySlot({
                     name: `${boneName}_${slotIndex}`,
                     item: attachment || null,
-                    x: HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
-                    y: HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
-                    width: HumanInventory.bones[i].width,
-                    height: HumanInventory.bones[i].height,
+                    x: this.HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
+                    y: this.HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
+                    width: this.HumanInventory.bones[i].width,
+                    height: this.HumanInventory.bones[i].height,
                     padding,
                     color: 'darkgray'
                 }, slotSelected);
 
-                if (!HumanInventory.targetSlot && slotSelected) {
-                    HumanInventory.targetSlot = {
+                if (!this.HumanInventory.targetSlot && slotSelected) {
+                    this.HumanInventory.targetSlot = {
                         isBone: true,
                         name: `${boneName}_${slotIndex}`,
                         item: attachment || null,
@@ -552,8 +581,8 @@ const Screen = {
                 color: 'darkgray'
             }, slotSelected);
 
-            if (!HumanInventory.targetSlot && slotSelected) {
-                HumanInventory.targetSlot = {
+            if (!this.HumanInventory.targetSlot && slotSelected) {
+                this.HumanInventory.targetSlot = {
                     isBone: false,
                     name: i,
                     item: slot.item,
@@ -562,17 +591,25 @@ const Screen = {
             };
         };
 
-        if (!slotSelected) HumanInventory.targetSlot = null;
+        if (!slotSelected) this.HumanInventory.targetSlot = null;
     },
     renderInventorySlot(slot, slotSelected, ctx = this.cameraCtx) {
         let isSlotSelected = slotSelected;
 
         if (!isSlotSelected && Physics.checkCircleBox2(0, {
-            x: Mouse.x - TestCamera.x + Screen.cameraView.width / 2,
-            y: Mouse.y - TestCamera.y + Screen.cameraView.height / 2,
+            x: this.Input.Mouse.x,
+            y: this.Input.Mouse.y,
             radius: 1,
         }, slot)) {
             isSlotSelected = true;
+            ctx.fillStyle = `rgba(255, 117, 25, 0.9)`;
+            ctx.fillRect(
+                slot.x - Math.floor(slot.width / 2),// + slot.padding / 2, 
+                slot.y - Math.floor(slot.height / 2),// + slot.padding / 2, 
+                slot.width,
+                slot.height
+            );
+        } else if (slot.highlighted) {
             ctx.fillStyle = `rgba(255, 117, 25, 0.9)`;
             ctx.fillRect(
                 slot.x - Math.floor(slot.width / 2),// + slot.padding / 2, 
@@ -594,9 +631,9 @@ const Screen = {
         if (slot.item) {
             let x = slot.x;
             let y = slot.y;
-            if (HumanInventory.selectedSlot?.name == slot.name) {
-                x = Mouse.x - TestCamera.x + Screen.cameraView.width / 2;
-                y = Mouse.y - TestCamera.y + Screen.cameraView.height / 2;
+            if (this.HumanInventory.selectedSlot?.name == slot.name) {
+                x = this.Input.Mouse.x;
+                y = this.Input.Mouse.y;
             };
             this.renderBox({
                 x: x,
@@ -615,5 +652,67 @@ const Screen = {
         ctx.strokeRect(slot.x - Math.floor(slot.width / 2), slot.y - Math.floor(slot.height / 2), slot.width, slot.height);
 
         return isSlotSelected;
+    },
+    renderHotbar(hotbar = HOTBAR, ctx = this.cameraCtx) {
+        hotbar.targetSlot = null;
+
+        let slotSelected = false;
+        const padding = 5;
+        const totalPaddingWidth = padding * this.HumanInventory.Torso.width;
+        const totalPaddingHeight = padding
+        const perRow = 5;//item.skeleton.character.inventory.slots.length / 2;
+        const nRows = 1;
+        const slotSize = this.HumanInventory.Torso.width;
+        const slotSizePadded = (slotSize + padding + 1)
+        const iWidth = perRow * slotSizePadded;
+        const minX = clamp(
+            Screen.cameraView.width / 2 - iWidth / 2 + slotSizePadded / 2,
+            slotSize / 2,
+            Screen.cameraView.width - iWidth + slotSize / 2
+        );
+        const minY = clamp(
+            Screen.cameraView.height / 2 - nRows * slotSize,
+            slotSize / 2,
+            Screen.cameraView.height - nRows * slotSize + slotSize / 2
+        );
+        const slotsY = this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
+
+        for (let i = 0; i < HotbarInventory.slots.length; i++) {
+            const slot = HotbarInventory.slots[i];
+
+            const x = minX + (i % perRow) * slotSizePadded;
+            const y = Screen.cameraView.height - slotSizePadded / 2;
+
+            slotSelected = this.renderInventorySlot({
+                name: `HOTBAR-${i}`,
+                item: slot.item,
+                x,
+                y,
+                width: slotSize,
+                height: slotSize,
+                padding,
+                color: 'darkgray',
+                highlighted: HotbarInventory.slots[i].active
+            }, slotSelected);
+
+            if (!this.HumanInventory.targetSlot && slotSelected) {
+                hotbar.targetSlot = {
+                    isBone: false,
+                    name: `HOTBAR-${i}`,
+                    item: slot.item,
+                    slot: HotbarInventory.slots[i]
+                };
+                this.HumanInventory.targetSlot = {
+                    isBone: false,
+                    name: `HOTBAR-${i}`,
+                    item: slot.item,
+                    slot: HotbarInventory.slots[i]
+                };
+            };
+        };
+
+        if (!hotbar.targetSlot && !this.Input.Keys.renderInventory) {
+            this.HumanInventory.targetSlot = null;
+        }
     },
 };

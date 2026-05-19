@@ -1,4 +1,6 @@
-class HitBox extends Box {
+import { Box, Vector } from "../physics/geometry.js";
+
+export class HitBox extends Box {
     constructor(Owner, x, y, width = 10, height = 10, rotation, color) {
         super(x, y, width, height, rotation, color);
 
@@ -8,23 +10,23 @@ class HitBox extends Box {
 
     registerHit(dt, newTarget) {
         if (newTarget.id == this.Owner.id) return;
+        this.attack.onCollision(dt, newTarget, this);
+
         if (!this.targets.some(target => target.id == newTarget.id)) {
             this.targets.push(newTarget);
         };
         this.collision = true;
-
-        this.attack.onCollision(dt, newTarget);
     };
 };
 
-const collisionSideOrder = [1, 3, 0, 2];
-const entityBoxDirectionOffsets = [
+export const collisionSideOrder = [1, 3, 0, 2];
+export const entityBoxDirectionOffsets = [
     { x: 0, y: -1 },
     { x: 1, y: 0 },
     { x: -1, y: 0 },
     { x: 0, y: 1 },
 ];
-class EntityBox extends Box {
+export class EntityBox extends Box {
     constructor(x, y, width = 10, height = 10, rotation, color) {
         super(x, y, width, height, rotation, color, false);
 
@@ -65,6 +67,12 @@ class EntityBox extends Box {
             };
         };
 
+        if (this.skeleton?.character?.Stats.Breath) {
+            if(!this.waterCollision) {
+                this.skeleton.character.Stats.Breath.update(10 * dt);
+            }
+        };
+
         if (this.y - this.lastY >= 0) {
             this.jumping = false;
         };
@@ -101,7 +109,7 @@ class EntityBox extends Box {
         this.Ceiling.collision = false;
         this.Left.collision = false;
         this.Right.collision = false;
-        
+
         this.waterCollision = false;
     };
 };

@@ -1,4 +1,8 @@
-const MAX_WATER_PER_TILE = 8;
+import { getId, randomInt, randomEl } from "../../utils/utils.js";
+import { tileSize } from "../tilemap/tilemap.js";
+import { Box } from "../../physics/geometry.js";
+
+export const MAX_WATER_PER_TILE = 8;
 
 const WATER_FLOW_OFFSETS = [
     [
@@ -128,7 +132,7 @@ class WaterInstance {
         this.lastFlowT += dt;
         const speed = 0;//Math.sqrt(Math.pow(this.dx, 2) + Math.pow(this.dy, 2));
         if ((this.flowT < (FLOW_TICK_S) / (1 + speed))/* && !this.tile.waterSource*/) return;
-        if(this.lastFlowT > (this.stagnationLimit) && this.amount > 0 && this.amount <= this.getWaterCapacity() / 2) {
+        if (this.lastFlowT > (this.stagnationLimit) && this.amount > 0 && this.amount <= this.getWaterCapacity() / 2) {
             this.lastFlowT = 0;
             this.amount--;
             return;
@@ -148,15 +152,42 @@ class WaterInstance {
             return true;
         };
 
-        const leftTile = this.tile.getNeighbour(-1, 0);
-        // const leftWaterInstance = this.water.getWaterInstance(leftTile);
-        const rightTile = this.tile.getNeighbour(1, 0);
-        // const rightWaterInstance = this.water.getWaterInstance(rightTile);
-        const tiles = [];
-        // if (leftTile) tiles.push(leftTile);
-        // if (rightTile) tiles.push(rightTile);
-
+        // if(bottomTile)
+        const bottomLeftTile = this.tile.getNeighbour(-1, 1);
+        const bottomRightTile = this.tile.getNeighbour(1, 1);
+        let tiles = [];
         let nextTile;
+
+        if (this.dx > 0 && bottomRightTile && bottomRightTile.imageIndex > 1 && this.amount > 1) {
+            nextTile = bottomRightTile;
+        } else if (this.dx < 0 && bottomLeftTile && bottomLeftTile.imageIndex > 1 && this.amount > 1) {
+            nextTile = bottomLeftTile;
+        } else {
+            let hasFlow = false;
+            if (bottomLeftTile && bottomLeftTile.imageIndex > 1 && (this.amount > 0)) {
+                tiles.push(bottomLeftTile);
+                hasFlow = true;
+            };
+            if (bottomRightTile && bottomRightTile.imageIndex > 1 && (this.amount > 0)) {
+                tiles.push(bottomRightTile);
+                hasFlow = true;
+            };
+            if (hasFlow) {
+                nextTile = randomEl(tiles);
+            };
+        };
+        if (this.flowToTile(nextTile, true)) {
+            this.dy = 0;
+            if (Math.abs(this.dx) < 4) this.dx = 0;
+            this.lastFlowT = 0;
+            return true;
+        };
+
+        const leftTile = this.tile.getNeighbour(-1, 0);
+        const rightTile = this.tile.getNeighbour(1, 0);
+        tiles = [];
+
+        nextTile = null;
         if (this.dx > 0 && this.amount > 1) {
             nextTile = rightTile;
         } else if (this.dx < 0 && this.amount > 1) {
@@ -185,7 +216,7 @@ class WaterInstance {
         const topTile = this.tile.getNeighbour(0, -Math.abs(this.dy));
         this.dy = 0;
         // if (this.flowToTile(topTile)) {
-            // this.lastFlowT = 0;
+        // this.lastFlowT = 0;
         //     return true;
         // };
 
@@ -230,23 +261,25 @@ class WaterInstance {
         return false;
     };
 
-    flowToTile(tile) {
+    flowToTile(tile, skipCollisions) {
         if (!tile) return false;
         const flowX = tile.x - this.tile.x;
         const flowY = tile.y - this.tile.y;
-        if (tile.image) {
-            if (flowY > 0 && tile.topCollider) return false;
-            if (flowY < 0 && tile.bottomCollider) return false;
-            if (flowX > 0 && tile.leftCollider) return false;
-            if (flowX < 0 && tile.rightCollider) return false;
-            // return false;
-        };
-        if (this.tile.image) {
-            if (flowY > 0 && (this.tile.bottomCollider || this.tile.GhostCollider.bottom)) return false;
-            if (flowY < 0 && (this.tile.topCollider || this.tile.GhostCollider.top)) return false;
-            if (flowX > 0 && (this.tile.rightCollider || this.tile.GhostCollider.right)) return false;
-            if (flowX < 0 && (this.tile.leftCollider || this.tile.GhostCollider.left)) return false;
-            // return false;
+        if (!skipCollisions) {
+            if (tile.image) {
+                if (flowY > 0 && tile.topCollider) return false;
+                if (flowY < 0 && tile.bottomCollider) return false;
+                if (flowX > 0 && tile.leftCollider) return false;
+                if (flowX < 0 && tile.rightCollider) return false;
+                // return false;
+            };
+            if (this.tile.image) {
+                if (flowY > 0 && (this.tile.bottomCollider || this.tile.GhostCollider.bottom)) return false;
+                if (flowY < 0 && (this.tile.topCollider || this.tile.GhostCollider.top)) return false;
+                if (flowX > 0 && (this.tile.rightCollider || this.tile.GhostCollider.right)) return false;
+                if (flowX < 0 && (this.tile.leftCollider || this.tile.GhostCollider.left)) return false;
+                // return false;
+            };
         };
         const waterInstance = tile.waterInstance;
         if (waterInstance) {
@@ -394,7 +427,7 @@ class WaterInstance {
     };
 };
 
-class Water {
+export class Water {
     constructor(room) {
         this.room = room;
 

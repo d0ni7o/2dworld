@@ -1,3 +1,7 @@
+import { getId } from "../../utils/utils.js";
+import { HumanSkeleton, ChestSkeleton } from "../../animation/skeletons/skeleton.js";
+import { CharacterStats } from "../stats/stats.js";
+
 class InventorySlot {
     constructor(inventory) {
         this.item = null;
@@ -16,11 +20,11 @@ class InventorySlot {
     };
 };
 
-class Inventory {
-    constructor(character) {
+export class Inventory {
+    constructor(character, slots = 10) {
         this.character = character;
 
-        this.slots = new Array(10).fill(0).map(_ => new InventorySlot(this));
+        this.slots = new Array(slots).fill(0).map(_ => new InventorySlot(this));
     };
 
     add(item) {
@@ -30,6 +34,15 @@ class Inventory {
 
         return false;
     };
+
+    removeItem(id) {
+        for(let i = 0; i < this.slots.length; i++) {
+            if(this.slots[i].item && this.slots[i].item.id == id) {
+                this.slots[i].item = null;
+                break;
+            };
+        };
+    };
 };
 
 class Character {
@@ -38,6 +51,8 @@ class Character {
         this.skeleton = skeleton;
         this.skeleton.character = this;
         this.inventory = new Inventory(this);
+
+        this.Stats = {};
     };
 
     pickup(item) {
@@ -49,13 +64,15 @@ class Character {
     };
 };
 
-class Human extends Character {
+export class Human extends Character {
     constructor(x, y, scale) {
         super(new HumanSkeleton(x, y, scale));
+
+        new CharacterStats(this);
     };
 };
 
-class Chest extends Character {
+export class Chest extends Character {
     constructor(x, y, scale) {
         super(new ChestSkeleton(x, y, scale));
     }
