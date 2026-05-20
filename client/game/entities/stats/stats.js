@@ -64,10 +64,14 @@ class HpStat extends Stat {
 
         this.character = character;
         this.character.Stats.Hp = this;
+
+        this.color = 'red';
+        this.color2 = 'rgba(255, 0, 0, 0.25)';
     };
 
     onChange() {
         if(this.currentValue <= 0) {
+            this.character.die();
         };
     };
 };
@@ -78,12 +82,15 @@ class BreathStat extends Stat {
 
         this.character = character;
         this.character.Stats.Breath = this;
+
+        this.color = 'blue';
+        this.color2 = 'rgba(0, 0, 255, 0.25)';
     };
 
     onChange(dt = 0) {
         if(this.currentValue <= 0) {
             this.character.Stats.Hp.update(-10 * dt)
-        };
+        };  
     };
 };
 
@@ -121,11 +128,14 @@ class HungerStat extends Stat {
 
         this.character = character;
         this.character.Stats.Hunger = this;
+
+        this.color = 'orange';
+        this.color2 = 'rgba(255, 165, 0, 0.25)';
     };
 
     onChange() {
         if(this.currentValue <= 0) {
-            console.log(`CHARACTER ${this.character.id} DEAD!!!`);
+            // console.log(`CHARACTER ${this.character.id} DEAD!!!`);
         };
     };
 };
@@ -136,16 +146,39 @@ class StaminaStat extends Stat {
 
         this.character = character;
         this.character.Stats.Stamina = this;
+
+        this.color = 'green';
+        this.color2 = 'rgba(0, 255, 0, 0.25)';
+    };
+
+    onChange() {
+        if(this.currentValue <= 0) {
+            this.character.Stats.MovementSpeed.currentValue = 0.25;
+        } else {
+            this.character.Stats.MovementSpeed.currentValue = this.character.walking ? 0.5 : 1;
+        };
+    };
+};
+
+class MovementSpeedStat extends Stat {
+    constructor(character) {
+        super('MovementSpeed', 1, [], 0, 1);
+
+        this.character = character;
+        this.character.Stats.MovementSpeed = this;
     };
 };
 
 export class CharacterStats {
     constructor(character, baseStats, statModifiers) {
-        new HungerStat(character);
-        new StaminaStat(character);
-
         new HpStat(character);
+        new HungerStat(character);
+
+        new StaminaStat(character);
         new BreathStat(character);
+        new MovementSpeedStat(character);
+
+
         new DamageStat(character);
         new DefenseStat(character);
     };

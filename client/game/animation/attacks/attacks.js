@@ -95,6 +95,96 @@ class Thrust1 extends Attack {
     }
 };
 
+export class Punch extends Attack {
+    constructor(Owner, dx) {
+        super(
+            Owner,
+            dx,
+            -1,
+            [
+                {
+                    xOffset: 0,
+                    yOffset: 0,
+                    box: new HitBox(Owner, Owner.x, Owner.y, Owner.height, Owner.width)
+                }
+            ],
+            20
+        );
+
+        this.animationT = 0;
+        this.lastAngleOffset = 0;
+        this.maxAngleOffset = Math.PI;
+
+        this.speed = 50;
+    };
+
+    updateGeometry(dt) {
+        if (!dt) return;
+        this.Owner.unRotate();
+        if (this.frame < (7 * this.durationFrames / 10)) {
+            // this.Owner.rescale(this.Owner.root.skeleton.ogScale + this.animationT * 4);
+            this.Owner.rotate(Math.PI / 2);
+            for (let i = 0; i < this.hitboxes.length; i++) {
+                this.hitboxes[i].box.x = -2;
+                this.hitboxes[i].box.y = -2;
+                this.hitboxes[i].box.width = 1;
+                this.hitboxes[i].box.height = 1;
+                this.hitboxes[i].box.updateGeometry();
+            };
+            // if (this.frame > (6 * this.durationFrames / 10)) {
+            this.Owner.offsetX -= this.Owner.dirX * dt * this.Owner.width;
+            // };
+        } else if (this.frame < (9 * this.durationFrames / 10)) {
+            // this.Owner.rescale(this.Owner.root.skeleton.ogScale + this.animationT * 4);
+            this.Owner.rotate(Math.PI / 2);
+            this.Owner.offsetX += this.Owner.dirX * dt * this.Owner.height * 7;
+            // this.Owner.offsetY += this.Owner.dirX * dt * this.Owner.height * 8;
+            for (let i = 0; i < this.hitboxes.length; i++) {
+                this.hitboxes[i].box.width = this.Owner.parent.skeleton.Controller.width / 2;
+                this.hitboxes[i].box.height = this.Owner.parent.skeleton.Controller.height;
+                this.hitboxes[i].box.x = this.Owner.parent.skeleton.Controller.x + this.Owner.dirX * (this.Owner.parent.skeleton.Controller.width * 3 / 4);// + Math.sign(this.dx) * this.hitboxes[i].xOffset + this.Owner.offsetX + this.Owner.height / 4;
+                this.hitboxes[i].box.y = this.Owner.parent.skeleton.Controller.y;// + Math.sign(this.dy) * this.hitboxes[i].yOffset - this.Owner.width / 2;
+                this.hitboxes[i].box.updateGeometry();
+            };
+        } else {
+            this.Owner.rotate(Math.PI / 2);
+            // this.Owner.resetScale();
+            for (let i = 0; i < this.hitboxes.length; i++) {
+                this.hitboxes[i].box.x = -2;
+                this.hitboxes[i].box.y = -2;
+                this.hitboxes[i].box.width = 1;
+                this.hitboxes[i].box.height = 1;
+                this.hitboxes[i].box.updateGeometry();
+            };
+        };
+
+        this.animationT += dt;
+    }
+
+    onStart(dt) {
+        this.Owner.attacking = true;
+        this.Owner.animationT = 0;
+        this.Owner.unRotate();
+        this.Owner.animationState = 'pose';
+    }
+
+    onEnd(dt) {
+        this.Owner.attacking = false;
+        this.Owner.resetScale();
+        this.Owner.unRotate();
+        this.Owner.updateGeometry();
+        this.Owner.skeleton.resetAnimationTime();
+        this.Owner.offsetX = 0;
+        this.Owner.offsetY = 0;
+    }
+
+    onCollision(dt, entityBox, hitBox) {
+        if (!entityBox.skeleton?.character?.Stats?.Hp || entityBox.skeleton?.Controller.id == this.Owner.skeleton.Controller.id) return;
+        if (hitBox.targets.some(({ id }) => id == entityBox.id)) return;
+        entityBox.skeleton.character.Stats.Hp.update(-10);
+    }
+};
+
 export class SwordAttack extends Attack {
     constructor(Owner, dx) {
         super(
@@ -163,6 +253,13 @@ export class SwordAttack extends Attack {
     }
 
     onStart(dt) {
+        this.drainStamina = true;
+        if (this.Owner.parent.skeleton.character.Stats.Stamina.currentValue < 50) {
+            this.frame = this.durationFrames;
+            this.drainStamina = false;
+            return;
+        };
+
         super.onStart(dt);
         this.Owner.parent.animationT = 0;
         this.Owner.parent.unRotate();
@@ -179,11 +276,12 @@ export class SwordAttack extends Attack {
         this.Owner.parent.physOffsetY = 0;
         this.Owner.physOffsetX = 0;
         this.Owner.physOffsetY = 0;
+        if(this.drainStamina) this.Owner.parent.skeleton.character.Stats.Stamina.update(-50);
     }
 
     onCollision(dt, entityBox, hitBox) {
-        if(!entityBox.skeleton?.character?.Stats?.Hp || entityBox.skeleton?.Controller.id == this.Owner.parent.skeleton.Controller.id) return;
-        if(hitBox.targets.some(({ id }) => id == entityBox.id)) return;
-        entityBox.skeleton.character.Stats.Hp.update(-10);
+        if (!entityBox.skeleton?.character?.Stats?.Hp || entityBox.skeleton?.Controller.id == this.Owner.parent.skeleton.Controller.id) return;
+        if (hitBox.targets.some(({ id }) => id == entityBox.id)) return;
+        entityBox.skeleton.character.Stats.Hp.update(-50);
     }
 };

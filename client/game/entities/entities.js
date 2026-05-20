@@ -68,9 +68,15 @@ export class EntityBox extends Box {
         };
 
         if (this.skeleton?.character?.Stats.Breath) {
-            if(!this.waterCollision) {
+            if (!this.waterCollision) {
                 this.skeleton.character.Stats.Breath.update(10 * dt);
-            }
+            };
+
+            if (this.skeleton.character.isMoving()) {
+                this.skeleton.character.Stats.Stamina.update(-10 * dt);
+            } else {
+                this.skeleton.character.Stats.Stamina.update(60 * dt);
+            };
         };
 
         if (this.y - this.lastY >= 0) {

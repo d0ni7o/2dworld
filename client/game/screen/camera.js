@@ -37,18 +37,6 @@ export class Camera extends Box {
             this.y = this.Target.y;
             this.y = clamp(this.y, this.Target.room.y - this.Target.room.height / 2 + this.Screen.cameraView.height / 2, this.Target.room.y + this.Target.room.height / 2 - this.Screen.cameraView.height / 2);
         };
-        // const dx = (this.Target.x - this.x);
-        // const dy = (this.Target.y - this.y);
-        // if (Math.abs(dx) < 1 / dt / 10) {
-        //     this.x = this.Target.x;
-        // } else {
-        //     this.x += dx * dt;
-        // };
-        // if (Math.abs(dy) < 1 / dt / 10) {
-        //     this.y = this.Target.y;
-        // } else {
-        //     this.y += dy * dt;
-        // };
     };
 
     updateView() {

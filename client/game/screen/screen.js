@@ -1,5 +1,7 @@
 import { tileSize } from "../world/tilemap/tilemap.js";
-import { CONTEXT_MENU, HOTBAR, HotbarInventory, ITEM_INVENTORY } from "../animation/skeletons/skeleton.js";
+import { CONTEXT_MENU } from "../ui/context_menu.js";
+import { ITEM_INVENTORY } from "../ui/item_inventory.js";
+import { HOTBAR, HotbarInventory } from "../ui/hotbar.js";
 import { clamp } from "../utils/utils.js";
 import { Physics } from "../physics/physics.js";
 
@@ -16,6 +18,8 @@ export const Screen = {
         this.cameraCtx = this.cameraView.getContext('2d', { willReadFrequently: true });
         this.resize();
         this.resize(this.cameraView);
+        this.ctx.font = '16px Arial'
+        this.cameraCtx.font = '16px Arial'
     },
     renderCircle: function (circle, ctx = this.ctx) {
         ctx.beginPath();
@@ -177,8 +181,17 @@ export const Screen = {
             ctx.fillStyle = 'blue';
             ctx.fillRect(
                 characterController.x - characterController.width / 2,
-                characterController.y - characterController.height / 2 - tileSize - tileSize / 4,
+                characterController.y - characterController.height / 2 - tileSize - 2 * tileSize / 4,
                 characterController.width * character.Stats.Breath.currentValue / character.Stats.Breath.max,
+                tileSize / 4
+            );
+        };
+        if (character.Stats.Stamina.currentValue < character.Stats.Stamina.max) {
+            ctx.fillStyle = 'green';
+            ctx.fillRect(
+                characterController.x - characterController.width / 2,
+                characterController.y - characterController.height / 2 - tileSize - tileSize / 4,
+                characterController.width * character.Stats.Stamina.currentValue / character.Stats.Stamina.max,
                 tileSize / 4
             );
         };
@@ -189,6 +202,48 @@ export const Screen = {
             characterController.width * character.Stats.Hp.currentValue / character.Stats.Hp.max,
             tileSize / 4
         );
+    },
+    renderStats(stats = this.Input.Player.entityBox.skeleton.character.Stats, ctx = this.cameraCtx) {
+        const padding = 5;
+        ctx.fillStyle = 'gray';
+        ctx.fillRect(0, 0, this.cameraView.width, 2 * tileSize + padding * 2);
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'darkgray';
+        ctx.strokeRect(0, 0, this.cameraView.width, 2 * tileSize + padding * 2);
+
+        const statW = 3 * tileSize;
+        const statH = tileSize;
+        let totalH = padding;
+        let totalW = padding;
+        let x = 0;
+        let y = 0;
+        let counter = 0;
+
+        ctx.fillStyle = 'black';
+        for (const stat of Object.values(stats)) {
+            if (stat.color2) {
+                ctx.fillStyle = stat.color2;
+                ctx.fillRect(totalW, totalH, statW, statH);
+
+                ctx.fillStyle = stat.color || 'black';
+                ctx.fillRect(totalW, totalH, statW * stat.currentValue / stat.max, statH);
+            } else {
+                ctx.fillStyle = stat.color || 'black';
+                ctx.fillRect(totalW, totalH, statW, statH);
+            };
+            ctx.fillStyle = 'white';
+            const text = `${stat.name}: ${stat.currentValue.toFixed(2)} / ${stat.max}`;
+            const measure = ctx.measureText(text);
+            ctx.fillText(text, totalW + statW / 2 - measure.width / 2, totalH + statH / 2);
+
+            totalH += statH;
+            counter++;
+
+            if ((counter % 2) == 0) {
+                totalW += statW;
+                totalH = padding;
+            };
+        };
     },
     renderSkeleton(skeleton, ctx = this.ctx) {
         // console.log(`RENDER SKELETON`, skeleton);
@@ -482,7 +537,6 @@ export const Screen = {
                 color: 'darkgray'
             }, slotSelected);
 
-            ctx.font = '16px Arial'
             ctx.fillStyle = 'black';
             ctx.fillText(option.name, x - slotSize / 4, y);
 
@@ -645,6 +699,14 @@ export const Screen = {
                     image: slot.item.animator.image
                 }
             }, ctx);
+
+            if (slot.item.init.maxStack > 1) {
+                ctx.font = '16px Arial'
+                ctx.fillStyle = 'white';
+                const metrics = ctx.measureText(slot.item.stack);
+                ctx.fillText(slot.item.stack, x - this.HumanInventory.Torso.width / 2 + (metrics.width / 2) / (1 + Math.floor(Math.log10(slot.item.stack))), y - this.HumanInventory.Torso.width / 4);
+                // const metrics = ctx.measureText(slot.item.stack);
+            };
         };
 
         ctx.lineWidth = slot.padding || 1;
@@ -711,7 +773,7 @@ export const Screen = {
             };
         };
 
-        if (!hotbar.targetSlot && !this.Input.Keys.renderInventory) {
+        if (!hotbar.targetSlot && !this.Input.Keys.renderInventory && !ITEM_INVENTORY.render) {
             this.HumanInventory.targetSlot = null;
         }
     },

@@ -38,9 +38,12 @@ export class Attachment extends EntityBox {
             this.interactable = init.interactable.bind(this);
         };
 
-        if(ITEM[this.name].init.onUse) {
+        if (ITEM[this.name].init.onUse) {
             this.onUse = ITEM[this.name].init.onUse.bind(this);
         };
+
+        this.stack = 1;
+        this.stackedInstances = [];
     };
 
     setParent(parent) {
@@ -192,16 +195,48 @@ class ItemDefinition {
 };
 
 const ITEM = {
+    Wood: new ItemDefinition('Wood', AnimationSets.Wood, {
+        scale: 2,
+        width: 18,
+        height: 7,
+        maxStack: 16
+    }),
+    Meat: new ItemDefinition('Meat', AnimationSets.Meat, {
+        scale: 2,
+        width: 19,
+        height: 9,
+        maxStack: 16,
+        onUse: function (character) {
+            this.stack--;
+            if(this.cooked) {
+                character.Stats.Hp.update(60);
+            } else {
+                character.Stats.Hp.update(-10);
+            };
+            if (this.stack <= 0) {
+                this.currentInventorySlot.item = null;
+                character.skeleton.Controller.room.entityBoxes = character.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != this.id);
+                character.inventory.removeItem(this.id);
+            } else {
+                this.stackedInstances = this.stackedInstances.slice(1);
+            };
+        },
+    }),
     Apple: new ItemDefinition('Apple', AnimationSets.Apple, {
+        scale: 2,
         width: 14,
         height: 14,
-        scale: 2,
-        onUse: function(character) {
-            console.log(`EAT APPLE?`);
-            this.currentInventorySlot.item = null;
+        maxStack: 16,
+        onUse: function (character) {
+            this.stack--;
             character.Stats.Hp.update(20);
-            character.skeleton.Controller.room.entityBoxes = character.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != this.id);
-            character.inventory.removeItem(this.id);
+            if (this.stack <= 0) {
+                this.currentInventorySlot.item = null;
+                character.skeleton.Controller.room.entityBoxes = character.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != this.id);
+                character.inventory.removeItem(this.id);
+            } else {
+                this.stackedInstances = this.stackedInstances.slice(1);
+            };
         },
     }),
     Sword: new ItemDefinition('Sword', AnimationSets.Sword, {
@@ -307,7 +342,7 @@ const ITEM = {
                 },
             ]
         }
-    }),
+    })
 };
 
 export const spawnItem = function (name, x, y, room) {
@@ -318,8 +353,10 @@ export const spawnItem = function (name, x, y, room) {
         y,
         width: itemDef.init.width,
         height: itemDef.init.height,
-        weaponAttacks: itemDef.init.weaponAttacks || null
+        weaponAttacks: itemDef.init.weaponAttacks || null,
+        scale: itemDef.init.scale,
+        maxStack: itemDef.init.maxStack
     });
-    room.addGeometry('entityBox', newItem);
+    if(room) room.addGeometry('entityBox', newItem);
     return newItem;
 };

@@ -111,6 +111,66 @@ export class Animator {
 }
 
 export const AnimationSets = {
+    RabbitHead: new AnimationSet('./assets/animations/Rabbit/head/rabbit_head_0001.png', 'RabbitHead', {
+        animations: {
+            blink: { path: 'assets/animations/Rabbit/head' },
+            pose: { parentAnimation: 'blink', parentAnimationFrames: [0] },
+            closeEyes: { parentAnimation: 'blink', parentAnimationFrames: [6] },
+        },
+        updateState: (animator, dt) => {
+            switch (animator.currentAnimationName) {
+                case 'blink':
+                    if (animator.bone.root.Ceiling.collision || (!animator.bone.root.jumping && !animator.bone.root.Floor.collision)) {
+                        animator.setAnimation('closeEyes');
+                    } else if (animator.currentFrame == (animator.currentAnimation.frameData.length - 2)) {
+                        animator.setAnimation('pose');
+                    };
+                    break;
+                case 'closeEyes':
+                    if (!animator.bone.root.Ceiling.collision && !(!animator.bone.root.jumping && !animator.bone.root.Floor.collision)) {
+                        animator.setAnimation('pose');
+                    };
+                    break;
+                case 'pose':
+                default:
+                    if (animator.bone.root.Ceiling.collision || (!animator.bone.root.jumping && !animator.bone.root.Floor.collision)) {
+                        animator.setAnimation('closeEyes');
+                    } else if (Math.random() < dt) {
+                        animator.setAnimation('blink');
+                    };
+                    break;
+            };
+        },
+    }),
+    RabbitTorso: new AnimationSet('./assets/animations/Rabbit/torso/rabbit_torso.png', 'RabbitTorso'),
+    RabbitTail: new AnimationSet('./assets/animations/Rabbit/tail/rabbit_tail.png', 'RabbitTail'),
+    Meat: new AnimationSet('./assets/animations/Meat/base/meat_0001.png', 'Meat', {
+        animations: {
+            base: { path: 'assets/animations/Meat/base' },
+            pose: { parentAnimation: 'base', parentAnimationFrames: [0] },
+            cooked: { parentAnimation: 'base', parentAnimationFrames: [1] },
+        },
+        updateState: (animator, dt) => {
+            switch (animator.currentAnimationName) {
+                case 'base':
+                    animator.setAnimation('pose');
+                    break;
+                case 'cooked':
+                    break;
+                case 'pose':
+                default:
+                    if (animator.bone.cooked) {
+                        animator.setAnimation('cooked');
+                    };
+                    break;
+            };
+        }
+    }),
+    Fire: new AnimationSet('./assets/animations/Fire/base/fire_0.png', 'Fire', {
+        animations: {
+            pose: { path: 'assets/animations/Fire/base' }
+        },
+    }),
     Chest: new AnimationSet('./assets/animations/Chest/base/chest_0001.png', 'Chest', {
         animations: {
             base: { path: 'assets/animations/Chest/base' },
@@ -179,6 +239,7 @@ export const AnimationSets = {
     Helm: new AnimationSet('./assets/helm.png', 'Helm'),
     Gloves: new AnimationSet('./assets/gloves.png', 'Gloves'),
     Apple: new AnimationSet('./assets/apple.png', 'Apple'),
+    Wood: new AnimationSet('./assets/animations/Wood/base/wood.png', 'Wood'),
 };
 
 export const loadAnimationSets = async function () {
