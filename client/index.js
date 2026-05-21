@@ -7,6 +7,7 @@ import { Camera } from "./game/screen/camera.js";
 import { WorldGenerator } from "./game/world/generator/world-generator.js";
 import { isLoading, randomInt } from "./game/utils/utils.js";
 import { CONTEXT_MENU } from "./game/ui/context_menu.js";
+import { CRAFTING_MENU } from "./game/ui/crafting_menu.js";
 import { ITEM_INVENTORY } from "./game/ui/item_inventory.js";
 import { HumanInventorySkeleton } from "./game/animation/skeletons/human/human.skeleton.js";
 import { Human } from "./game/entities/characters/human/human.character.js";
@@ -14,8 +15,10 @@ import { Chest } from "./game/entities/characters/chest/chest.character.js";
 import { Rabbit } from "./game/entities/characters/rabbit/rabbit.character.js";
 import { Input } from "./game/input/input.js";
 import { spawnItem } from "./game/entities/items/items.js";
+import { Campfire } from "./game/entities/characters/campfire/campfire.character.js";
+import { initializeInventorySkeletons } from "./game/animation/skeletons/inventories/inventory-skeletons.js";
+import { Tree } from "./game/entities/characters/tree/tree.character.js";
 
-Screen.setup();
 let pausePhysics = false;
 
 class Door extends Box {
@@ -170,10 +173,10 @@ class Game {
             itemsSpawned = true;
 
             PlayerCharacter = new Human(100, 100, 4);
+
             this.Input.Player.entityBox = PlayerCharacter.skeleton.Controller;
             this.MainCamera.setTarget(PlayerCharacter.skeleton.Controller);
 
-            World.rooms[0].addGeometry('character', PlayerCharacter);
             // World.rooms[0].addGeometry('character', new Human(200, 100, 1));
             // World.rooms[0].addGeometry('character', new Human(400, 100, 2));
             // World.rooms[0].addGeometry('character', new Human(600, 100, 3));
@@ -191,10 +194,15 @@ class Game {
             for (let i = 0; i < 20; i++) {
                 spawnItem('Apple', randomInt(0, World.rooms[0].width), 0, this.Input.Player.entityBox.room);
                 spawnItem('Wood', randomInt(0, World.rooms[0].width), 0, this.Input.Player.entityBox.room);
-            World.rooms[0].addGeometry('character', new Rabbit(randomInt(0, World.rooms[0].width), 0, 2));
+                World.rooms[0].addGeometry('character', new Rabbit(randomInt(0, World.rooms[0].width), 0, 2));
             };
+            
+            World.rooms[0].addGeometry('character', new Tree(randomInt(0, World.rooms[0].width), 100));
 
             World.rooms[0].addGeometry('character', new Chest(500, 100, 4));
+            World.rooms[0].addGeometry('character', new Campfire(600, 100, 2));
+
+            World.rooms[0].addGeometry('character', PlayerCharacter);
         }
         // tileChange += dt;
         // if (tileChange >= 1) {
@@ -223,12 +231,14 @@ class Game {
         };
         if (CONTEXT_MENU.render) {
             if (Math.pow(CONTEXT_MENU.target.x - this.Input.Player.entityBox.x, 2) + Math.pow(CONTEXT_MENU.target.y - this.Input.Player.entityBox.y, 2) >= Math.pow(CONTEXT_MENU.range, 2)) {
-                CONTEXT_MENU.render = false;
+                CONTEXT_MENU.close();
             } else {
                 Screen.renderContextMenu();
             };
         };
+        if (CRAFTING_MENU.render) Screen.renderCraftingMenu();
         Screen.renderHotbar();
+        Screen.renderUnstackSlot();
 
 
 
@@ -255,11 +265,14 @@ class Game {
 
         this.MainCamera = new Camera(null, Screen);
         this.HumanInventory = new HumanInventorySkeleton(0, 0, 10);
+        initializeInventorySkeletons(this);
+        Screen.INVENTORY_SKELETON = this.INVENTORY_SKELETON;
         new Input(this);
 
         Screen.Input = this.Input;
         Screen.Camera = this.MainCamera;
         Screen.HumanInventory = this.HumanInventory;
+        Screen.setup();
 
         World.rooms = [
             new Room(World,

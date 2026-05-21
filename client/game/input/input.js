@@ -3,6 +3,8 @@ import { ITEM_INVENTORY } from "../ui/item_inventory.js";
 import { HotbarInventory } from "../ui/hotbar.js";
 import { clamp } from "../utils/utils.js";
 import { tileSize, TileSets } from "../world/tilemap/tilemap.js";
+import { CRAFTING_MENU } from "../ui/crafting_menu.js";
+import { Recpies } from "../entities/recipes.js";
 
 document.addEventListener('contextmenu', event => event.preventDefault());
 
@@ -144,7 +146,7 @@ export class Input {
 
                     thisRef.TileUpdates = {};
 
-                    thisRef.Game.HumanInventory.handleInventoryInput(thisRef);
+                    thisRef.Game.HumanInventory.handleInventoryInput(thisRef, MouseButtonMap[event.button]);
                 };
                 document.body.addEventListener('mouseup', Listener.mouseup);
             };
@@ -168,6 +170,13 @@ export class Input {
         // if (key == 'ShiftLeft') this.Game.World.rooms[0].circles = [];
         if (key == 'KeyI') {
             this.Keys.renderInventory = !this.Keys.renderInventory;
+        };
+        if (key == 'KeyU') {
+            if(CRAFTING_MENU.render) {
+                CRAFTING_MENU.close();
+            } else {
+                CRAFTING_MENU.open(Recpies.Campfire);
+            };
         };
 
         if (this.pausePhysics) return;
@@ -225,7 +234,7 @@ export class Input {
         };
     };
     handleTileInput(event) {
-        if (this.Keys.renderInventory || ITEM_INVENTORY.render || CONTEXT_MENU.render) return;
+        if (ITEM_INVENTORY.render || CONTEXT_MENU.render) return;
         const x = clamp(
             this.Mouse.worldX,
             this.Player.entityBox.room.x - this.Player.entityBox.room.width / 2,

@@ -110,6 +110,12 @@ export class Room {
             case 'character':
                 this.characters.push(geometry);
                 this.entityBoxes.push(geometry.skeleton.Controller);
+                if (geometry.skeleton.addEntityBoxes) {
+                    for (const entityBox of geometry.skeleton.addEntityBoxes) {
+                        entityBox.room = this;
+                        this.entityBoxes.push(entityBox);
+                    };
+                };
                 break;
             case 'entityBox':
                 this.entityBoxes.push(geometry);
@@ -174,7 +180,7 @@ export class Room {
                     side.collision = false;
                 };
                 if (entityBox.isStatic) {
-                    entityBox.resetCollisions();
+                    entityBox.resetCollisions(dt);
                     continue;
                 };
                 this.gravity(entityBox);
@@ -186,7 +192,7 @@ export class Room {
 
                 entityBox.updatePos(dt);
 
-                entityBox.resetCollisions();
+                entityBox.resetCollisions(dt);
             };
             const passes = 1;
             for (let p = 0; p < passes; p++) {
@@ -239,6 +245,12 @@ export class Room {
                         // Physics.checkEntityBoxEntityBox(dt, this.entityBoxes[i], this.entityBoxes[j]);
 
                         if (Physics.checkBoxBox(this.entityBoxes[i], this.entityBoxes[j])) {
+                            if(this.entityBoxes[i].onCollision) { 
+                                this.entityBoxes[i].onCollision(dt, this.entityBoxes[j]);
+                            } else if(this.entityBoxes[j].onCollision) { 
+                                this.entityBoxes[j].onCollision(dt, this.entityBoxes[i]);
+                            };
+
                             if (this.entityBoxes[i].interact && this.entityBoxes[j].interactable) {
                                 this.entityBoxes[j].interactable(this.entityBoxes[i]);
                                 continue;
@@ -326,6 +338,10 @@ export class Room {
                         // this.TileMap.optimizeColliders();
                     };
                 };
+            };
+
+            for (const character of this.characters) {
+                character.update(dt);
             };
 
             // this.totalDt += dt;

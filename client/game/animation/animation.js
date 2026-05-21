@@ -144,6 +144,7 @@ export const AnimationSets = {
     }),
     RabbitTorso: new AnimationSet('./assets/animations/Rabbit/torso/rabbit_torso.png', 'RabbitTorso'),
     RabbitTail: new AnimationSet('./assets/animations/Rabbit/tail/rabbit_tail.png', 'RabbitTail'),
+    Campfire: new AnimationSet('./assets/animations/Campfire/base/campfire.png', 'Campfire'),
     Meat: new AnimationSet('./assets/animations/Meat/base/meat_0001.png', 'Meat', {
         animations: {
             base: { path: 'assets/animations/Meat/base' },
@@ -240,6 +241,9 @@ export const AnimationSets = {
     Gloves: new AnimationSet('./assets/gloves.png', 'Gloves'),
     Apple: new AnimationSet('./assets/apple.png', 'Apple'),
     Wood: new AnimationSet('./assets/animations/Wood/base/wood.png', 'Wood'),
+    Trunk: new AnimationSet('./assets/animations/Tree/trunk/trunk_0.png', 'Trunk'),
+    Branch: new AnimationSet('./assets/animations/Tree/branch/branch_0.png', 'Branch'),
+    Leaves: new AnimationSet('./assets/animations/Tree/leaves/leaves.png', 'Leaves'),
 };
 
 export const loadAnimationSets = async function () {

@@ -4,10 +4,13 @@ import { ITEM_INVENTORY } from "../ui/item_inventory.js";
 import { HOTBAR, HotbarInventory } from "../ui/hotbar.js";
 import { clamp } from "../utils/utils.js";
 import { Physics } from "../physics/physics.js";
+import { CRAFTING_MENU } from "../ui/crafting_menu.js";
 
 window.addEventListener('resize', function (event) {
     Screen.resize();
     Screen.resize(Screen.cameraView);
+    Screen.ctx.font = '16px Arial'
+    Screen.cameraCtx.font = '16px Arial'
 });
 
 export const Screen = {
@@ -325,31 +328,6 @@ export const Screen = {
     },
     renderWaterInstance(waterInstance, ctx) {
         if (!waterInstance.amount) return;
-        // Screen.renderRect({
-        //     x: waterInstance.tile.x * tileSize + water.room.x - water.room.width / 2 + tileSize / 2,
-        //     y: waterInstance.tile.y * tileSize + water.room.y - water.room.height / 2 + tileSize / 2,
-        //     width: tileSize,
-        //     height: tileSize,
-        //     color: 'rgba(0, 140, 255, 0.5)'
-        // })
-        // let waterWidth;
-        // let waterHeight;// = waterInstance.amount * tileSize / MAX_WATER_PER_TILE;
-        // if (waterInstance.dy != 0) {
-        //     waterWidth = waterInstance.amount * tileSize / MAX_WATER_PER_TILE;
-        //     waterHeight = tileSize;
-        // } else {
-        //     waterWidth = tileSize;
-        //     waterHeight = waterInstance.amount * tileSize / MAX_WATER_PER_TILE;
-        // };
-        // const x = waterInstance.tile.x * tileSize + waterInstance.tile.TileMap.room.x - waterInstance.tile.TileMap.room.width / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterWidth) / 2;
-        // let y = waterInstance.tile.y * tileSize + waterInstance.tile.TileMap.room.y - waterInstance.tile.TileMap.room.height / 2 + tileSize / 2 - Math.floor(tileSize / 2) + (tileSize - waterHeight);
-
-        // const bottomNeighbour = waterInstance.tile.getNeighbour(0, 1);
-        // if(bottomNeighbour) {
-        //     if(bottomNeighbour.imageIndex == 2 || bottomNeighbour.imageIndex == 4) {
-        //         y += tileSize / 2;
-        //     }
-        // };
 
         ctx.fillStyle = `rgba(0, ${140 - waterInstance.amount * 5}, 255, 0.6)`;
         ctx.fillRect(
@@ -358,33 +336,8 @@ export const Screen = {
             waterInstance.width,
             waterInstance.height
         );
-
-
-        // ctx.setTransform(1, 0, 0, 1, 0, 0);
-        // ctx.fillStyle = 'black';
-        // ctx.font = '16px Arial'
-        // ctx.fillText(waterInstance.amount, x + tileSize / 2, y + tileSize / 2);
-
-        // if (waterInstance.amount) {
-        //     ctx.strokeStyle = 'blue';
-        //     ctx.strokeRect(waterInstance.x, waterInstance.y, waterInstance.width, waterInstance.height);
-        //     // this.renderBox(waterInstance);
-        // };
-        // if (!tileMap.map[x][y].image) {
-        //     continue;
-        // };
     },
     renderWater(water, ctx = this.ctx) {
-        // const boundaries = water.getBoundaries();
-        // ctx.beginPath();
-        // ctx.moveTo(boundaries[0].p0.x, boundaries[0].p0.y);
-        // for (let i = 0; i < boundaries.length; i++) {
-        //     this.renderRay2(boundaries[i]);
-        // };
-        // ctx.closePath();
-        // ctx.fillStyle = `rgba(0, 100, 255, 0.5)`;
-        // ctx.fill();
-        // return;
         for (let i = 0; i < water.instances.length; i++) {
             this.renderWaterInstance(water.instances[i], ctx);
         };
@@ -392,6 +345,12 @@ export const Screen = {
     resize: function (screen = this.main) {
         screen.width = window.innerWidth;
         screen.height = window.innerHeight;
+        if (this.HumanInventory) {
+            this.HumanInventory.Controller.x = this.cameraView.width / 2;
+            this.HumanInventory.Controller.y = this.cameraView.height / 2;
+            this.HumanInventory.Controller.updateGeometry();
+            this.HumanInventory.calculateSize();
+        };
     },
     renderItemInventory: function (item = ITEM_INVENTORY.target, screen = this.cameraView, ctx = this.cameraCtx) {
         if (!this.Input.Keys.renderInventory) this.HumanInventory.targetSlot = null;
@@ -400,7 +359,7 @@ export const Screen = {
         const padding = 5;
         const totalPaddingWidth = padding * this.HumanInventory.Torso.width;
         const totalPaddingHeight = padding
-        const perRow = 5;//item.skeleton.character.inventory.slots.length / 2;
+        const perRow = item.skeleton.character.inventory.slots.length;//item.skeleton.character.inventory.slots.length / 2;
         const nRows = Math.ceil(item.skeleton.character.inventory.slots.length / perRow);
         const slotSize = this.HumanInventory.Torso.width;
         const slotSizePadded = (slotSize + padding + 1)
@@ -417,61 +376,84 @@ export const Screen = {
         );
         const slotsY = this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
 
-        // for (const i of HumanInventory.renderIndex) {
-        //     const coords = {
-        //         x: HumanInventory.bones[i].x,
-        //         y: HumanInventory.bones[i].y,
-        //         rotation: 0,
-        //         flipX: false,
-        //         offsetX: 0,
-        //         offsetY: 0,
-        //         width: HumanInventory.bones[i].width,
-        //         height: HumanInventory.bones[i].height
-        //     };
-        //     const boneName = HumanInventory.bones[i].animator.animationSet.name;
+        const InventorySkeleton = this.INVENTORY_SKELETON[item.skeleton.character.constructor.name];
 
-        //     for (const slotIndex in HumanInventory.Slots[boneName]) {
-        //         const slotOffsetX = HumanInventory.bones[i].width * HumanInventory.Slots[boneName][slotIndex].parentX;;
-        //         const slotOffsetY = HumanInventory.bones[i].height * HumanInventory.Slots[boneName][slotIndex].parentY;
+        if (InventorySkeleton) {
+            InventorySkeleton.Controller.x = item.x - iWidth / 2 + slotSizePadded / 2 - this.Camera.x + Screen.cameraView.width / 2;
+            InventorySkeleton.Controller.y = item.y - nRows * slotSize - this.Camera.y + Screen.cameraView.height / 2;
 
-        //         const attachment = character.skeleton.bones[i].getChild((bone) => {
-        //             if (bone.parent.id != character.skeleton.bones[i].id) return false;
-        //             if (bone.attachmentDef) {
-        //                 return bone.attachmentDef.slots.includes(Number(slotIndex));
-        //             };
-        //             return false;
-        //         });
+            const x = minX;
+            const y = minY + slotSizePadded - 2 * slotSizePadded;
 
-        //         this.renderEntityBox({
-        //             ...character.skeleton.bones[i],
-        //             ...coords,
-        //             animator: { ...character.skeleton.bones[i].animator, image: HumanInventory.bones[i].animator.image },
-        //             x: HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
-        //             y: HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
-        //         });
+            if (InventorySkeleton.Craft) {
+                const bone = item.skeleton[InventorySkeleton.Craft.bone];
+
+                ctx.fillStyle = 'red';
+                ctx.fillRect(
+                    x - slotSize / 2,
+                    y - slotSize / 8,
+                    slotSize * bone.craftT / bone.maxCraftT,
+                    slotSize / 4
+                );
+            };
+
+            for (const i of InventorySkeleton.renderIndex) {
+                const coords = {
+                    x: InventorySkeleton.bones[i].x,
+                    y: InventorySkeleton.bones[i].y,
+                    rotation: 0,
+                    flipX: false,
+                    offsetX: 0,
+                    offsetY: 0,
+                    width: slotSize,
+                    height: slotSize
+                };
+                const boneName = InventorySkeleton.bones[i].animator.animationSet.name;
+
+                for (const slotIndex in InventorySkeleton.Slots[boneName]) {
+                    const slotOffsetX = slotSize * InventorySkeleton.Slots[boneName][slotIndex].parentX;;
+                    const slotOffsetY = slotSize * InventorySkeleton.Slots[boneName][slotIndex].parentY;
+
+                    const attachment = item.skeleton.bones[i].getChild((bone) => {
+                        if (bone.parent.id != item.skeleton.bones[i].id) return false;
+                        if (bone.attachmentDef) {
+                            return bone.attachmentDef.slots.includes(Number(slotIndex));
+                        };
+                        return false;
+                    });
+
+                    this.renderEntityBox({
+                        ...item.skeleton.bones[i],
+                        ...coords,
+                        animator: { ...item.skeleton.bones[i].animator, image: InventorySkeleton.bones[i].animator.image },
+                        x: x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
+                        y: y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
+                    });
 
 
-        //         slotSelected = this.renderInventorySlot({
-        //             name: `${boneName}_${slotIndex}`,
-        //             item: attachment || null,
-        //             x: HumanInventory.bones[i].x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
-        //             y: HumanInventory.bones[i].y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
-        //             width: HumanInventory.bones[i].width,
-        //             height: HumanInventory.bones[i].height,
-        //             padding,
-        //             color: 'darkgray'
-        //         }, slotSelected);
+                    slotSelected = this.renderInventorySlot({
+                        name: `${boneName}_${slotIndex}`,
+                        item: attachment || null,
+                        x: x + slotOffsetX + (Math.sign(slotOffsetX)) * (padding + 1),
+                        y: y + slotOffsetY + (Math.sign(slotOffsetY)) * (padding + 1),
+                        width: slotSize,
+                        height: slotSize,
+                        padding,
+                        color: 'darkgray',
+                        backgroundAnimationSet: InventorySkeleton.bones[i].animator.animationSet
+                    }, slotSelected);
 
-        //         if (!HumanInventory.targetSlot && slotSelected) {
-        //             HumanInventory.targetSlot = {
-        //                 isBone: true,
-        //                 name: `${boneName}_${slotIndex}`,
-        //                 item: attachment || null,
-        //                 slot: character.skeleton.bones[i]
-        //             };
-        //         };
-        //     };
-        // };
+                    if (!this.HumanInventory.targetSlot && slotSelected) {
+                        this.HumanInventory.targetSlot = {
+                            isBone: true,
+                            name: `${boneName}_${slotIndex}`,
+                            item: attachment || null,
+                            slot: item.skeleton.bones[i]
+                        };
+                    };
+                };
+            };
+        }
 
         for (let i = 0; i < item.skeleton.character.inventory.slots.length; i++) {
             const slot = item.skeleton.character.inventory.slots[i];
@@ -501,6 +483,82 @@ export const Screen = {
         };
 
         // if (!slotSelected) HumanInventory.targetSlot = null;
+    },
+    renderCraftingMenu: function (menu = CRAFTING_MENU, screen = this.cameraView, ctx = this.cameraCtx) {
+        if (!this.Input.Keys.renderInventory) this.HumanInventory.targetSlot = null;
+        let targetButton = null;
+
+
+        let slotSelected = false;
+        const padding = 5;
+        const totalPaddingWidth = padding * this.HumanInventory.Torso.width;
+        const totalPaddingHeight = padding
+        const perRow = menu.recipe.inventory.slots.length + 1;
+        const slotSize = this.HumanInventory.Torso.width;
+        const slotSizePadded = (slotSize + padding + 1)
+        const iWidth = perRow * slotSizePadded;
+        const minX = slotSizePadded / 2;//this.HumanInventory.Controller.x - iWidth / 2 + slotSizePadded / 2;
+        const slotsY = screen.height - slotSizePadded / 2 - padding * 2;//this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
+
+        let extraIndex = 0;
+
+        for (let i = 0; i < menu.recipe.inventory.slots.length; i++) {
+            if (i == menu.recipe.input.length) extraIndex = 1;
+            const slot = menu.recipe.inventory.slots[i];
+
+            slotSelected = this.renderInventorySlot({
+                name: `CRAFTING_MENU_${i}`,
+                item: slot.item,
+                x: minX + ((i + extraIndex) % perRow) * slotSizePadded,
+                y: slotsY + slotSizePadded * Math.floor((i + extraIndex) / perRow) + padding * 2,
+                width: slotSize,
+                height: slotSize,
+                padding,
+                color: 'darkgray',
+                backgroundAnimationSet: slot.backgroundAnimationSet
+            }, slotSelected);
+
+            if (!this.HumanInventory.targetSlot && slotSelected) {
+                this.HumanInventory.targetSlot = {
+                    isBone: false,
+                    name: `CRAFTING_MENU_${i}`,
+                    item: slot.item,
+                    slot: menu.recipe.inventory.slots[i]
+                };
+            };
+        };
+
+
+        const x = slotSizePadded / 2;
+        const y = slotsY + slotSizePadded * Math.floor((extraIndex) / perRow) + padding * 2 - slotSizePadded;
+        slotSelected = this.renderInventorySlot({
+            x,
+            y,
+            width: slotSize,
+            height: slotSize,
+            padding,
+            color: 'darkgray'
+        }, false);
+
+        const textMeasure = ctx.measureText('CRAFT');
+        ctx.fillStyle = 'black';
+        ctx.fillText('CRAFT', x - textMeasure.width / 2, y);
+
+        if (slotSelected && this.Input.Mouse.down) {
+            menu.craft(this.Input.Player.entityBox.skeleton.character);
+        };
+
+        if (this.Input.Player.entityBox.skeleton.character.crafting) {
+            // const bone = item.skeleton[InventorySkeleton.Craft.bone];
+
+            ctx.fillStyle = 'red';
+            ctx.fillRect(
+                x - slotSize / 2 + (menu.recipe.output.length + 1) * slotSizePadded,
+                y - slotSize / 8 + slotSizePadded,
+                slotSize * this.Input.Player.entityBox.skeleton.character.craftT / this.Input.Player.entityBox.skeleton.character.craftingRecipe.maxCraftT,
+                slotSize / 4
+            );
+        };
     },
     renderContextMenu: function (menu = CONTEXT_MENU, screen = this.cameraView, ctx = this.cameraCtx) {
         const padding = 5;
@@ -547,13 +605,19 @@ export const Screen = {
             };
         };
     },
+    renderUnstackSlot: function () {
+        if (!this.HumanInventory.unstackSlot.item) return;
+        this.renderInventorySlot({
+            ...this.HumanInventory.unstackSlot,
+            width: this.HumanInventory.Torso.width,
+            height: this.HumanInventory.Torso.height
+        });
+    },
     renderInventory: function (character, screen = this.cameraView, ctx = this.cameraCtx) {
-        this.HumanInventory.Controller.x = screen.width / 2;
-        this.HumanInventory.Controller.y = screen.height / 2;
         this.HumanInventory.Controller.updateGeometry();
         this.HumanInventory.calculateSize();
-
         this.HumanInventory.targetSlot = null;
+
         let slotSelected = false;
         const padding = 5;
         const totalPaddingWidth = padding * this.HumanInventory.Torso.width;
@@ -562,8 +626,11 @@ export const Screen = {
         const slotSize = this.HumanInventory.Torso.width;
         const slotSizePadded = (slotSize + padding + 1)
         const iWidth = perRow * slotSizePadded;
-        const minX = this.HumanInventory.Controller.x - iWidth / 2 + slotSizePadded / 2;
-        const slotsY = this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
+        const minX = screen.width - iWidth + slotSizePadded / 2;//this.HumanInventory.Controller.x - iWidth / 2 + slotSizePadded / 2;
+        const slotsY = screen.height - 3 * slotSizePadded / 2 - padding * 2;//this.HumanInventory.maxY + this.HumanInventory.Torso.width / 2;
+
+        this.HumanInventory.Controller.x = screen.width - this.HumanInventory.Controller.width;
+        this.HumanInventory.Controller.y = screen.height - 2 * slotSizePadded - padding * 2 - this.HumanInventory.Controller.height / 2;
 
         for (const i of this.HumanInventory.renderIndex) {
             const coords = {
@@ -650,13 +717,29 @@ export const Screen = {
     renderInventorySlot(slot, slotSelected, ctx = this.cameraCtx) {
         let isSlotSelected = slotSelected;
 
+        if (slot.backgroundAnimationSet) {
+            let x = slot.x;
+            let y = slot.y;
+            
+            this.renderBox({
+                x: x,
+                y: y,
+                width: slot.width,
+                height: slot.height,
+                sides: [],
+                animator: {
+                    image: slot.backgroundAnimationSet.image
+                }
+            }, ctx);
+        };
+
         if (!isSlotSelected && Physics.checkCircleBox2(0, {
             x: this.Input.Mouse.x,
             y: this.Input.Mouse.y,
             radius: 1,
         }, slot)) {
             isSlotSelected = true;
-            ctx.fillStyle = `rgba(255, 117, 25, 0.9)`;
+            ctx.fillStyle = `rgba(255, 117, 25, 0.8)`;
             ctx.fillRect(
                 slot.x - Math.floor(slot.width / 2),// + slot.padding / 2, 
                 slot.y - Math.floor(slot.height / 2),// + slot.padding / 2, 
@@ -664,7 +747,7 @@ export const Screen = {
                 slot.height
             );
         } else if (slot.highlighted) {
-            ctx.fillStyle = `rgba(255, 117, 25, 0.9)`;
+            ctx.fillStyle = `rgba(255, 117, 25, 0.8)`;
             ctx.fillRect(
                 slot.x - Math.floor(slot.width / 2),// + slot.padding / 2, 
                 slot.y - Math.floor(slot.height / 2),// + slot.padding / 2, 
@@ -672,7 +755,7 @@ export const Screen = {
                 slot.height
             );
         } else {
-            ctx.fillStyle = `rgba(128, 128, 128, 0.9)`;
+            ctx.fillStyle = `rgba(128, 128, 128, 0.8)`;
             ctx.fillRect(
                 slot.x - Math.floor(slot.width / 2),// + slot.padding / 2, 
                 slot.y - Math.floor(slot.height / 2),// + slot.padding / 2, 
@@ -701,7 +784,7 @@ export const Screen = {
             }, ctx);
 
             if (slot.item.init.maxStack > 1) {
-                ctx.font = '16px Arial'
+                // ctx.font = '16px Arial'
                 ctx.fillStyle = 'white';
                 const metrics = ctx.measureText(slot.item.stack);
                 ctx.fillText(slot.item.stack, x - this.HumanInventory.Torso.width / 2 + (metrics.width / 2) / (1 + Math.floor(Math.log10(slot.item.stack))), y - this.HumanInventory.Torso.width / 4);

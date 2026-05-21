@@ -2,6 +2,7 @@ import { Bone, Skeleton } from "../skeleton.js";
 import { AnimationSets } from "../../animation.js";
 import { Punch } from "../../attacks/attacks.js";
 import { clamp } from "../../../utils/utils.js";
+import { Inventory } from "../../../entities/characters/character.js";
 
 let testTorsoAngle = Math.PI;
 const breathingScale = 1.2;
@@ -601,15 +602,38 @@ export class HumanInventorySkeleton extends HumanSkeleton {
                 }
             ]
         }
+
+        this.unstackInventory = new Inventory(this, 1);
+        this.unstackSlot = {
+            isBone: false,
+            name: 'UNSTACK_SLOT',
+            item: null,
+            slot: this.unstackInventory.slots[0]
+        };
     };
 
-    handleInventoryInput(Input) {
+    handleInventoryInput(Input, mouseButton) {
         if (!this.selectedSlot && !this.targetSlot) {
             return;
         };
 
         if (!this.selectedSlot) {
-            this.selectedSlot = this.targetSlot?.item ? this.targetSlot : null;
+            if (this.targetSlot?.item) {
+                if (mouseButton == 'RMB' && this.targetSlot.item.init.maxStack > 1 && this.targetSlot.item.stack > 1) {
+                    this.unstackSlot.item = this.targetSlot.item.stackedInstances[0];
+                    this.unstackSlot.item.stack = 1;
+                    this.unstackSlot.item.stackedInstances = [];
+                    this.unstackSlot.item.currentInventorySlot = null;
+                    this.unstackSlot.slot.add(this.unstackSlot.item);
+
+                    this.targetSlot.item.stack--;
+                    this.targetSlot.item.stackedInstances = this.targetSlot.item.stackedInstances.slice(1);
+
+                    this.selectedSlot = this.unstackSlot;
+                } else {
+                    this.selectedSlot = this.targetSlot;
+                };
+            };
             return;
         };
         if (!this.selectedSlot.item || this.selectedSlot.item.parent?.attacking) {
@@ -647,6 +671,7 @@ export class HumanInventorySkeleton extends HumanSkeleton {
                 Input.Player.entityBox.room.characters.push(this.selectedSlot.item.skeleton.character);
             };
             // this.selectedSlot.item.flipX = false;
+            this.selectedSlot.item = null;
             this.selectedSlot = null;
 
             return;
@@ -672,6 +697,7 @@ export class HumanInventorySkeleton extends HumanSkeleton {
                     this.selectedSlot.item.attach(this.targetSlot.slot.skeleton, ogParent.id);
                 };
             };
+            this.selectedSlot.item = null;
             this.selectedSlot = null;
             return;
         };
@@ -682,13 +708,17 @@ export class HumanInventorySkeleton extends HumanSkeleton {
                 if (!this.targetSlot.slot.add(this.selectedSlot.slot.item)) {
                     return;
                 } else {
+                    this.selectedSlot.item = null;
                     this.selectedSlot = null;
                     return;
                 };
             };
             this.selectedSlot.item.detach();
             this.targetSlot.slot.add(this.selectedSlot.item);
-            this.selectedSlot = null;
+            if (!this.selectedSlot.slot.item) {
+                this.selectedSlot.item = null;
+                this.selectedSlot = null;
+            };
             return;
         };
 

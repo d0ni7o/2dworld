@@ -1,33 +1,48 @@
 import { getId } from "../../utils/utils.js";
+import { spawnItem } from "../items/items.js";
 
-class InventorySlot {
+export class InventorySlot {
     constructor(inventory) {
         this.item = null;
         this.id = getId();
         this.inventory = inventory;
+        this.stackable = true;
     };
 
     add(item) {
+        if (this.requiredItem && !this.requiredItem(item)) return;
         if (this.item) {
-            if (this.item.animator.animationSet.name == item.animator.animationSet.name) {
-                if (this.item.init.maxStack > 1 && (this.item.stack + item.stack) <= this.item.init.maxStack) {
-                    this.item.stack += item.stack;
-                    this.item.stackedInstances.push(...[item, ...item.stackedInstances]);
-                    if (item.currentInventorySlot) {
-                        item.currentInventorySlot.item = null;
-                    };
-                    item.currentInventorySlot = this;
-                    return true;
+            if (this.item.isStackable && this.item.isStackable(item) && this.stackable) {
+                this.item.stack += item.stack;
+                this.item.stackedInstances.push(...[item, ...item.stackedInstances]);
+                if (item.currentInventorySlot) {
+                    item.currentInventorySlot.item = null;
                 };
+                item.currentInventorySlot = this;
+                item.stack = 1;
+                item.stackedInstances = [];
+                return true;
             };
             return false;
         };
-        if (item.currentInventorySlot) {
-            item.currentInventorySlot.item = null;
+
+        if (!this.stackable && item.stack > 1) {
+            this.item = item.stackedInstances[0];
+            this.item.stack = 1;
+            this.item.stackedInstances = [];
+            this.item.currentInventorySlot = this;
+
+            item.stackedInstances = item.stackedInstances.slice(1);
+            item.stack--;
+            return false;
+        } else {
+            if (item.currentInventorySlot) {
+                item.currentInventorySlot.item = null;
+            };
+            this.item = item;
+            item.currentInventorySlot = this;
+            return true;
         };
-        this.item = item;
-        item.currentInventorySlot = this;
-        return true;
     };
 };
 
@@ -49,10 +64,19 @@ export class Inventory {
     removeItem(id) {
         for (let i = 0; i < this.slots.length; i++) {
             if (this.slots[i].item && this.slots[i].item.id == id) {
+                /** ENTITY POOL */
                 this.slots[i].item = null;
                 break;
             };
         };
+    };
+
+    isFull(item) {
+        for (let i = 0; i < this.slots.length; i++) {
+            if(!this.slots[i].item) return false;
+            if(this.slots[i].item.isStackable && this.slots[i].item.isStackable(item)) return false;
+        };
+        return true;
     };
 };
 
@@ -67,6 +91,51 @@ export class Character {
         this.inventory = new Inventory(this);
 
         this.Stats = {};
+    };
+
+    update(dt) {
+        this.craft(dt);
+    };
+
+    startCraft(recipe) {
+        for (let i = 0; i < recipe.input.length; i++) {
+            if (!recipe.inventory.slots[i].item) return;
+        };
+        for (let i = 0; i < recipe.output.length; i++) {
+            if (recipe.inventory.slots[i + recipe.input.length].item) return;
+        };
+
+        this.craftT = 0;
+        this.craftingRecipe = recipe;
+        this.crafting = true;
+    };
+
+    craft(dt) {
+        if (this.crafting) {
+            this.craftT += dt;
+            if (this.craftT >= this.craftingRecipe.maxCraftT) {
+                for (let i = 0; i < this.craftingRecipe.input.length; i++) {
+                    const craftingResult = this.craftingRecipe.builder(
+                        this.skeleton.Controller.x,
+                        this.skeleton.Controller.y
+                    );
+                    /** ENTITY POOL */
+                    this.craftingRecipe.inventory.slots[i].item = null;
+                };
+                for (let i = 0; i < this.craftingRecipe.output.length; i++) {
+                    const craftingResult = this.craftingRecipe.builder(
+                        this.skeleton.Controller.x,
+                        this.skeleton.Controller.y
+                    );
+                    craftingResult.room = this.skeleton.Controller.room;
+                    this.craftingRecipe.inventory.slots[i + this.craftingRecipe.input.length].add(craftingResult);
+                };
+
+                this.craftT = 0;
+                this.crafting = false;
+                this.craftingRecipe = null;
+            };
+        }
     };
 
     pickup(item) {

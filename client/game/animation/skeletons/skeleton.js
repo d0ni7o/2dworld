@@ -1,6 +1,6 @@
 import { EntityBox } from "../../entities/entities.js";
 import { AnimationSets, Animator } from "../animation.js";
-import { clamp } from "../../utils/utils.js";
+import { clamp, getId } from "../../utils/utils.js";
 import { Punch } from "../attacks/attacks.js";
 import { CONTEXT_MENU } from "../../ui/context_menu.js";
 import { ITEM_INVENTORY } from "../../ui/item_inventory.js";
@@ -58,6 +58,8 @@ export class Bone extends EntityBox {
 
             this.parent.children.push(this);
         };
+
+        this.unaffectSize = init.unaffectSize;
 
         this.setRoot();
     };
@@ -295,6 +297,7 @@ export class Bone extends EntityBox {
 
 export class Skeleton {
     constructor(bones, scale) {
+        this.id = getId()
         this.bones = bones;
 
         for (const bone of this.bones) {
@@ -312,6 +315,7 @@ export class Skeleton {
         let minY = Infinity;
         let maxY = -Infinity;
         for (let i = 1; i < this.bones.length; i++) {
+            if (this.bones[i].unaffectSize) continue;
             if (this.bones[i].AB.p0.x < minX) {
                 minX = this.bones[i].AB.p0.x;
             };

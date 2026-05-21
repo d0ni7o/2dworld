@@ -4,6 +4,12 @@ import { SwordAttack } from "../../animation/attacks/attacks.js";
 import { Animator } from "../../animation/animation.js";
 import { clamp } from "../../utils/utils.js";
 
+const isStackable = function (item2) {
+    if (this.init.maxStack == 1) return false;
+    if (this.animator.animationSet.name != item2.animator.animationSet.name) return false;
+    return this.stack + item2.stack <= this.init.maxStack;
+};
+
 export class Attachment extends EntityBox {
     constructor(scale, name, animationSet, init) {
         super(init.x || 0, init.y || 0, init.width * scale, init.height * scale, init.rotation || 0, init.color || 'blue');
@@ -44,6 +50,8 @@ export class Attachment extends EntityBox {
 
         this.stack = 1;
         this.stackedInstances = [];
+
+        this.isStackable = (ITEM[this.name].init.stackCondition || isStackable).bind(this);
     };
 
     setParent(parent) {
@@ -73,9 +81,25 @@ export class Attachment extends EntityBox {
 
         if (ITEM[this.name].init.attachment) {
             for (const attachmentDef of ITEM[this.name].init.attachment[skeletonName] || []) {
+                if (attachmentDef.attachmentCondition && !attachmentDef.attachmentCondition(this)) continue;
                 const bone = skeleton[attachmentDef.bone];
                 if (targetBoneId && bone.id != targetBoneId) continue;
                 const occupied = bone.slots.some(slot => attachmentDef.slots.includes(slot));
+                if (occupied) {
+                    const item = bone.attachments.find(attachment => attachment.animator.animationSet.name == this.animator.animationSet.name);
+                    if (item.isStackable(this)) {
+                        item.stack += this.stack;
+                        item.stackedInstances.push(...[this, ...this.stackedInstances]);
+                        if (this.currentInventorySlot) {
+                            this.currentInventorySlot.item = null;
+                        };
+                        this.currentInventorySlot = item.currentInventorySlot;
+                        this.stack = 1;
+                        this.stackedInstances = [];
+                        return true;
+                    };
+                    // return false;
+                };
                 if (!occupied) {
                     this.attachmentOrder = attachmentDef.attachmentOrder || 0;
                     bone.slots.push(...attachmentDef.slots);
@@ -199,16 +223,48 @@ const ITEM = {
         scale: 2,
         width: 18,
         height: 7,
-        maxStack: 16
+        maxStack: 16,
+        attachment: {
+            "CampfireSkeleton": [
+                {
+                    attachmentOrder: 1,
+                    slots: [0],
+                    bone: 'Campfire',
+                    parentX: 0,
+                    parentY: 0,
+                    childX: 0,
+                    childY: 0,
+                },
+            ]
+        },
     }),
     Meat: new ItemDefinition('Meat', AnimationSets.Meat, {
         scale: 2,
         width: 19,
         height: 9,
         maxStack: 16,
+        attachment: {
+            "CampfireSkeleton": [
+                {
+                    attachmentCondition: (item) => !item.cooked,
+                    attachmentOrder: -1,
+                    slots: [0],
+                    bone: 'Fire',
+                    parentX: 0,
+                    parentY: 1 / 4,
+                    childX: 0,
+                    childY: 0,
+                },
+            ]
+        },
+        stackCondition: function (item2) {
+            if (!isStackable.call(this, item2)) return false;
+            console.log(`MEAT STACK CONDITION`, this.cooked, item2.cooked);
+            return this.cooked == item2.cooked;
+        },
         onUse: function (character) {
             this.stack--;
-            if(this.cooked) {
+            if (this.cooked) {
                 character.Stats.Hp.update(60);
             } else {
                 character.Stats.Hp.update(-10);
@@ -355,8 +411,8 @@ export const spawnItem = function (name, x, y, room) {
         height: itemDef.init.height,
         weaponAttacks: itemDef.init.weaponAttacks || null,
         scale: itemDef.init.scale,
-        maxStack: itemDef.init.maxStack
+        maxStack: itemDef.init.maxStack || 1
     });
-    if(room) room.addGeometry('entityBox', newItem);
+    if (room) room.addGeometry('entityBox', newItem);
     return newItem;
 };

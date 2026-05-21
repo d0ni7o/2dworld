@@ -19,20 +19,20 @@ export class RabbitSkeleton extends Skeleton {
         });
         const Head = new Bone(AnimationSets.RabbitHead, {
             bone: Torso,
-            parentX: 0,
-            parentY: -1 / 2,
-            childX: 0,
-            childY: -1 / 2 + 3 / 11,
+            parentX: 3 / 12,
+            parentY: - 7 / 10,
+            childX:  0,
+            childY: 0,
         }, {
             width: 15 * scale,
             height: 19 * scale,
         });
         const Tail = new Bone(AnimationSets.RabbitTail, {
             bone: Torso,
-            parentX: 1 / 2,
-            parentY: 1 / 2,
-            childX: 1 / 2 - 4 / 5,
-            childY: 1 / 2 - 3 / 5,
+            parentX: -5/12,
+            parentY: -4/10,
+            childX: 0,
+            childY: 0,
         }, {
             width: 4 * scale,
             height: 4 * scale,
