@@ -69,7 +69,8 @@ export class Attachment extends EntityBox {
             return b.attachmentDef.slots[0] - a.attachmentDef.slots[0];
         });
 
-        this.parent.root.room.entityBoxes = this.parent.root.room.entityBoxes.filter(({ id }) => this.id != id);
+        this.parent.root.room.removeEntityBox(this);
+        // this.parent.root.room.entityBoxes = this.parent.root.room.entityBoxes.filter(({ id }) => this.id != id);
     };
 
     attach(skeleton, targetBoneId) {
@@ -266,8 +267,10 @@ const ITEM = {
             this.stack--;
             if (this.cooked) {
                 character.Stats.Hp.update(60);
+                character.Stats.Hunger.update(60);
             } else {
                 character.Stats.Hp.update(-10);
+                character.Stats.Hunger.update(10);
             };
             if (this.stack <= 0) {
                 this.currentInventorySlot.item = null;
@@ -286,6 +289,7 @@ const ITEM = {
         onUse: function (character) {
             this.stack--;
             character.Stats.Hp.update(20);
+            character.Stats.Hunger.update(20);
             if (this.stack <= 0) {
                 this.currentInventorySlot.item = null;
                 character.skeleton.Controller.room.entityBoxes = character.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != this.id);
@@ -294,6 +298,41 @@ const ITEM = {
                 this.stackedInstances = this.stackedInstances.slice(1);
             };
         },
+    }),
+    Rock: new ItemDefinition('Rock', AnimationSets.Rock, {
+        scale: 2,
+        width: 18,
+        height: 12,
+        maxStack: 16,
+    }),
+    Spear: new ItemDefinition('Spear', AnimationSets.Spear, {
+        width: 25,
+        height: 9,
+        attachment: {
+            "HumanSkeleton": [
+                {
+                    attachmentOrder: -1,
+                    slots: [0],
+                    bone: 'RightArm',
+                    parentX: 0,
+                    parentY: 1 / 2 - 3 / 9,
+                    childX: 1 / 2 - 4 / 27,
+                    childY: 0
+                },
+                {
+                    attachmentOrder: 1,
+                    slots: [0],
+                    bone: 'LeftArm',
+                    parentX: 0,
+                    parentY: 1 / 2 - 3 / 9,
+                    childX: 1 / 2 - 4 / 27,
+                    childY: 0,
+                },
+            ]
+        },
+        weaponAttacks: [
+            SwordAttack
+        ]
     }),
     Sword: new ItemDefinition('Sword', AnimationSets.Sword, {
         width: 27,

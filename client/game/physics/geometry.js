@@ -1,6 +1,15 @@
 import { getId } from "../utils/utils.js";
 import { tileSize } from "../world/tilemap/tilemap.js";
 
+
+export const getSqDistance = function(p1, p2) {
+    return Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2);
+};
+ 
+export const getDistance = function (p1, p2) {
+    return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+};
+
 export const intersects = function (a, b, c, d, p, q, r, s) {
     let det, gamma, lambda;
     det = (c - a) * (s - q) - (r - p) * (d - b);

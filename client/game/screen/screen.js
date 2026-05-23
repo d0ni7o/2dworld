@@ -5,6 +5,8 @@ import { HOTBAR, HotbarInventory } from "../ui/hotbar.js";
 import { clamp } from "../utils/utils.js";
 import { Physics } from "../physics/physics.js";
 import { CRAFTING_MENU } from "../ui/crafting_menu.js";
+import { FPS_MENU } from "../ui/fps_menu.js";
+import { RECIPES_MENU } from "../ui/recipes_menu.js";
 
 window.addEventListener('resize', function (event) {
     Screen.resize();
@@ -306,6 +308,16 @@ export const Screen = {
             };
         };
     },
+    renderCell(cell, ctx) {
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = 'red';
+        ctx.strokeRect(
+            cell.Position.x - cell.width / 2,
+            cell.Position.y - cell.height / 2,
+            cell.width,
+            cell.height
+        );
+    },
     renderTile(tile, tileMap, ctx) {
         Screen.renderRect({
             x: tile.Position.x,// * tileSize + tileMap.room.x - tileMap.room.width / 2 + tileSize / 2,
@@ -531,33 +543,70 @@ export const Screen = {
 
         const x = slotSizePadded / 2;
         const y = slotsY + slotSizePadded * Math.floor((extraIndex) / perRow) + padding * 2 - slotSizePadded;
-        slotSelected = this.renderInventorySlot({
-            x,
+
+        this.renderButton({
+            x, y,
+            width: slotSize,
+            height: slotSize,
+            padding,
+            text: 'CRAFT',
+            callback: () => menu.craft(this.Input.Player.entityBox.skeleton.character)
+        }, ctx);
+
+        this.renderButton({
+            x: x + slotSizePadded,
             y,
             width: slotSize,
             height: slotSize,
             padding,
-            color: 'darkgray'
-        }, false);
-
-        const textMeasure = ctx.measureText('CRAFT');
-        ctx.fillStyle = 'black';
-        ctx.fillText('CRAFT', x - textMeasure.width / 2, y);
-
-        if (slotSelected && this.Input.Mouse.down) {
-            menu.craft(this.Input.Player.entityBox.skeleton.character);
-        };
+            text: 'RECIPES',
+            callback: () => RECIPES_MENU.render = !RECIPES_MENU.render
+        }, ctx);
 
         if (this.Input.Player.entityBox.skeleton.character.crafting) {
-            // const bone = item.skeleton[InventorySkeleton.Craft.bone];
-
             ctx.fillStyle = 'red';
             ctx.fillRect(
-                x - slotSize / 2 + (menu.recipe.output.length + 1) * slotSizePadded,
+                x - slotSize / 2 + (menu.recipe.input.length) * slotSizePadded,
                 y - slotSize / 8 + slotSizePadded,
                 slotSize * this.Input.Player.entityBox.skeleton.character.craftT / this.Input.Player.entityBox.skeleton.character.craftingRecipe.maxCraftT,
                 slotSize / 4
             );
+        };
+
+        if (RECIPES_MENU.render) {
+            for (let i = 0; i < RECIPES_MENU.recipes.length; i++) {
+                this.renderButton({
+                    x,
+                    y: y - (i + 1) * slotSizePadded,
+                    width: slotSize,
+                    height: slotSize,
+                    padding,
+                    text: RECIPES_MENU.recipes[i].name,
+                    callback: () => { 
+                        RECIPES_MENU.render = false;
+                        CRAFTING_MENU.open(RECIPES_MENU.recipes[i]);
+                    }
+                }, ctx);
+            };
+        };
+    },
+    renderButton: function (button, ctx = this.cameraCtx) {
+        const slotSelected = this.renderInventorySlot({
+            x: button.x,
+            y: button.y,
+            width: button.width,
+            height: button.height,
+            padding: button.padding,
+            color: 'darkgray'
+        }, false);
+
+        const textMeasure = ctx.measureText(button.text);
+        ctx.fillStyle = 'black';
+        ctx.fillText(button.text, button.x - textMeasure.width / 2, button.y);
+
+        if (slotSelected && this.Input.Mouse.clicked) {
+            this.Input.Mouse.clicked = false;
+            button.callback(this.Input.Player.entityBox.skeleton.character);
         };
     },
     renderContextMenu: function (menu = CONTEXT_MENU, screen = this.cameraView, ctx = this.cameraCtx) {
@@ -598,9 +647,10 @@ export const Screen = {
             ctx.fillStyle = 'black';
             ctx.fillText(option.name, x - slotSize / 4, y);
 
-            if (!menu.targetOption && slotSelected && this.Input.Mouse.down) {
+            if (!menu.targetOption && slotSelected && this.Input.Mouse.clicked) {
                 menu.targetOption = option;
                 menu.select(option);
+                this.Input.Mouse.clicked = false;
                 return;
             };
         };
@@ -720,7 +770,7 @@ export const Screen = {
         if (slot.backgroundAnimationSet) {
             let x = slot.x;
             let y = slot.y;
-            
+
             this.renderBox({
                 x: x,
                 y: y,
@@ -860,4 +910,19 @@ export const Screen = {
             this.HumanInventory.targetSlot = null;
         }
     },
+    renderFps(menu = FPS_MENU, screen = this.cameraView, ctx = this.cameraCtx) {
+        const averageFps = (menu.frames / menu.totalDt).toFixed(2);
+        const currentFps = (1 / menu.dt).toFixed(2);
+        const text = `${currentFps} (${averageFps})`;
+        const textMeasure = ctx.measureText(text);
+
+        const x = screen.width - textMeasure.width - textMeasure.width / 2;
+        const y = tileSize / 2;
+
+        ctx.fillStyle = 'white';
+        ctx.fillText(text, x, y);
+    },
+    renderRecipes(menu = RECIPES_MENU, screen = this.cameraView, ctx = this.cameraCtx) {
+
+    }
 };

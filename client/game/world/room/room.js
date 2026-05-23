@@ -3,6 +3,262 @@ import { Water } from "../fluids/water.js";
 import { Vector } from "../../physics/geometry.js";
 import { gForce, Physics } from "../../physics/physics.js";
 import { MAX_WATER_PER_TILE } from "../fluids/water.js";
+import { clamp } from "../../utils/utils.js";
+
+class SpatialGridCell {
+    constructor(grid, x, y, width, height) {
+        this.grid = grid;
+
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+
+        this.circles = [];
+        this.boxes = [];
+        this.rays = [];
+        this.ramps = [];
+        this.entityBoxes = [];
+        this.hitBoxes = [];
+        this.doors = [];
+
+        this.Ramps = {};
+        this.EntityBoxes = {};
+        this.HitBoxes = {};
+        this.Doors = {};
+
+        this.calculatePosition();
+
+        this.tiles = [];
+    };
+
+    calculatePosition() {
+        this.Position = {
+            x: this.x * this.width + this.grid.room.x - this.grid.room.width / 2 + this.width / 2,
+            y: this.y * this.height + this.grid.room.y - this.grid.room.height / 2 + this.height / 2,
+        };
+    };
+
+    reset() {
+        this.circles = [];
+        this.boxes = [];
+        this.rays = [];
+        this.ramps = [];
+        this.entityBoxes = [];
+        this.hitBoxes = [];
+        this.doors = [];
+
+        this.Ramps = {};
+        this.EntityBoxes = {};
+        this.HitBoxes = {};
+        this.Doors = {};
+    };
+};
+
+class SpatialGrid {
+    constructor(room) {
+        this.room = room;
+
+        const cellWidth = Math.min(this.room.width, 10 * tileSize);
+        const cellHeight = Math.min(this.room.height, 10 * tileSize);
+
+        const cellsX = this.room.width / cellWidth;
+        const cellsY = this.room.height / cellHeight;
+
+        this.cells = [];
+        for (let x = 0; x < cellsX; x++) {
+            this.cells.push([])
+            for (let y = 0; y < cellsY; y++) {
+                this.cells[x].push(new SpatialGridCell(this, x, y, cellWidth, cellHeight));
+            };
+        };
+
+        this.tilesPerX = cellWidth / tileSize;
+        this.tilesPerY = cellHeight / tileSize;
+
+        for (let tileX = 0; tileX < this.room.TileMap.map.length; tileX++) {
+            for (let tileY = 0; tileY < this.room.TileMap.map[tileX].length; tileY++) {
+                const gridX = Math.floor(tileX / this.tilesPerX);
+                const gridY = Math.floor(tileY / this.tilesPerY);
+
+                this.cells[gridX][gridY].tiles.push(this.room.TileMap.map[tileX][tileY]);
+            };
+        };
+
+        this.Ramps = {};
+        this.EntityBoxes = {};
+        this.HitBoxes = {};
+        this.Doors = {};
+    };
+
+    partition() {
+        // if(this.partitioned) return;
+        // this.partitioned = true;
+        // const resetMap = {};
+        for (const ramp of this.room.ramps) {
+            if (ramp.partitioned) continue;
+            const tileX = clamp(Math.floor((ramp.p0.x - this.room.x + this.room.width / 2) / tileSize), 0, this.room.TileMap.map.length - 1);
+            const tileY = clamp(Math.floor((ramp.p0.y - this.room.y + this.room.height / 2) / tileSize), 0, this.room.TileMap.map[0].length - 1);
+            const gridX = Math.floor(tileX / this.tilesPerX);
+            const gridY = Math.floor(tileY / this.tilesPerY);
+            if (this.Ramps[ramp.id]) {
+                delete this.cells[gridX][gridY].Ramps[ramp.id];
+            };
+            this.Ramps[ramp.id] = { gridX, gridY };
+            this.cells[gridX][gridY].Ramps[ramp.id] = ramp;
+            ramp.partitioned = true;
+            // if (!resetMap[`${gridX}-${gridY}`]) {
+            //     resetMap[`${gridX}-${gridY}`] = true;
+            //     this.cells[gridX][gridY].ramps = [];
+            // };
+            // this.cells[gridX][gridY].ramps.push(ramp);
+        };
+        for (const entityBox of this.room.entityBoxes) {
+            if (entityBox.partitioned) continue;
+            const tileX = clamp(Math.floor((entityBox.x - this.room.x + this.room.width / 2) / tileSize), 0, this.room.TileMap.map.length - 1);
+            const tileY = clamp(Math.floor((entityBox.y - this.room.y + this.room.height / 2) / tileSize), 0, this.room.TileMap.map[0].length - 1);
+            // const tile = this.room.TileMap.getTile(tileX, tileY);
+            // if(!tile) continue;
+            const gridX = Math.floor(tileX / this.tilesPerX);
+            const gridY = Math.floor(tileY / this.tilesPerY);
+            if (this.EntityBoxes[entityBox.id]) {
+                delete this.cells[gridX][gridY].EntityBoxes[entityBox.id];
+            };
+            this.EntityBoxes[entityBox.id] = { gridX, gridY };
+            this.cells[gridX][gridY].EntityBoxes[entityBox.id] = entityBox;
+            entityBox.partitioned = true;
+            // if (!resetMap[`${gridX}-${gridY}`]) {
+            //     resetMap[`${gridX}-${gridY}`] = true;
+            //     this.cells[gridX][gridY].entityBoxes = [];
+            // };
+            // this.cells[gridX][gridY].entityBoxes.push(entityBox);
+        };
+    };
+
+    parseCollisions(dt) {
+        for (let x = 1; x < this.cells.length - 1; x++) {
+            for (let y = 1; y < this.cells[x].length - 1; y++) {
+                const cells = [];
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        cells.push(this.cells[x + dx][y + dy]);
+                    };
+                };
+
+                const tiles = [];
+                const ramps = [];
+                const entityBoxes = [];
+                const hitBoxes = [];
+                const doors = [];
+
+                for (let i = 0; i < cells.length; i++) {
+                    tiles.push(...cells[i].tiles);
+                    ramps.push(...Object.values(cells[i].Ramps));
+                    entityBoxes.push(...Object.values(cells[i].EntityBoxes));
+                    hitBoxes.push(...cells[i].hitBoxes);
+                    doors.push(...cells[i].doors);
+                };
+
+                this.handleCollisions(dt, tiles, ramps, entityBoxes, hitBoxes, doors);
+            };
+        };
+    };
+
+
+    handleCollisions(dt, tiles, ramps, entityBoxes, hitBoxes, doors) {
+        const passes = 1;
+        for (let p = 0; p < passes; p++) {
+            for (let i = 0; i < ramps.length; i++) {
+                for (let j = 0; j < entityBoxes.length; j++) {
+                    if (ramps[i].collisionCondition && !ramps[i].collisionCondition(entityBoxes[j])) continue;
+                    Physics.checkEntityBoxRamp(dt, entityBoxes[j], ramps[i]);
+                };
+            };
+            for (let i = 0; i < doors.length; i++) {
+                doors[i].updatePos(dt);
+                for (let j = 0; j < entityBoxes.length; j++) {
+                    if (Physics.checkBoxBox(entityBoxes[j], doors[i])) {
+                        doors[i].onCollision(dt, entityBoxes[j]);
+                    };
+                };
+            };
+            for (let i = 0; i < entityBoxes.length; i++) {
+                for (let j = i + 1; j < entityBoxes.length; j++) {
+                    // Physics.checkEntityBoxEntityBox(dt, entityBoxes[i], entityBoxes[j]);
+
+                    if (Physics.checkBoxBox(entityBoxes[i], entityBoxes[j])) {
+                        if (entityBoxes[i].onCollision) {
+                            entityBoxes[i].onCollision(dt, entityBoxes[j]);
+                        } else if (entityBoxes[j].onCollision) {
+                            entityBoxes[j].onCollision(dt, entityBoxes[i]);
+                        };
+
+                        if (entityBoxes[i].interact && entityBoxes[j].interactable) {
+                            entityBoxes[j].interactable(entityBoxes[i]);
+                            continue;
+                        } else if (entityBoxes[j].interact && entityBoxes[i].interactable) {
+                            entityBoxes[i].interactable(entityBoxes[j]);
+                            continue;
+                        };
+
+                        if (entityBoxes[i].interact && entityBoxes[j].attach) {
+                            entityBoxes[j].attach(entityBoxes[i].skeleton);
+                        } else if (entityBoxes[j].interact && entityBoxes[i].attach) {
+                            entityBoxes[i].attach(entityBoxes[j].skeleton);
+                        };
+                    };
+                };
+            };
+            for (let i = 0; i < entityBoxes.length; i++) {
+                for (let j = 0; j < hitBoxes.length; j++) {
+                    if (Physics.checkBoxBox(entityBoxes[i], hitBoxes[j])) {
+                        hitBoxes[j].registerHit(dt, entityBoxes[i]);
+                    };
+                };
+
+                Physics.checkRoomOOB(this.room, entityBoxes[i]);
+            };
+        };
+
+        tiles.sort((a, b) => a.waterInstance.amount - b.waterInstance.amount);
+        for (const tile of tiles) {
+            const waterInstance = tile.waterInstance;
+
+            if (!waterInstance.amount) continue;
+            waterInstance.flow(dt);
+            if (!waterInstance.amount) continue;
+            if (!waterInstance) continue;
+            for (let j = 0; j < entityBoxes.length; j++) {
+                if (!waterInstance.amount) continue;
+                const waterCollider = waterInstance.getCollider();
+                if (!waterCollider) continue;
+                if (entityBoxes[j].noWaterCollision) continue;
+                if (Physics.checkBoxBox(entityBoxes[j], waterCollider)) {
+                    const dx = entityBoxes[j].x - entityBoxes[j].lastX;
+                    const dy = entityBoxes[j].y - entityBoxes[j].lastY;
+
+                    const waterDy = entityBoxes[j].y - waterInstance.tile.y * tileSize;
+
+                    entityBoxes[j].dx += waterInstance.dx * waterInstance.amount * dt * 1000;
+                    entityBoxes[j].dy += waterInstance.dy * waterInstance.amount * dt * 1000;
+                    entityBoxes[j].lastX = entityBoxes[j].x;
+                    entityBoxes[j].lastY = entityBoxes[j].y;
+
+
+                    if (entityBoxes[j].waterCollision) continue;
+                    if (entityBoxes[j].skeleton?.character?.Stats?.Breath && waterInstance.amount == MAX_WATER_PER_TILE) {
+                        entityBoxes[j].skeleton.character.Stats.Breath.update(-20 * dt, dt);
+                    };
+                    entityBoxes[j].waterCollision = true;
+                    entityBoxes[j].ddy -= 1.1 * (this.room.gForce || gForce) * (Math.min(MAX_WATER_PER_TILE - 1, waterInstance.amount)) / (MAX_WATER_PER_TILE - 1);
+                    if (dy > dt * 600) {
+                        waterInstance.splash(dx, dy / (dt * 600));
+                    };
+                };
+            };
+        };
+    };
+};
 
 export class Room {
     constructor(
@@ -94,6 +350,8 @@ export class Room {
             this.doors[i].y += this.y;
             this.doors[i].updateGeometry();
         };
+
+        this.spatialGrid = new SpatialGrid(this);
     };
 
     addGeometry(type, geometry, skipTranslation) {
@@ -110,11 +368,8 @@ export class Room {
             case 'character':
                 this.characters.push(geometry);
                 this.entityBoxes.push(geometry.skeleton.Controller);
-                if (geometry.skeleton.addEntityBoxes) {
-                    for (const entityBox of geometry.skeleton.addEntityBoxes) {
-                        entityBox.room = this;
-                        this.entityBoxes.push(entityBox);
-                    };
+                if (geometry.skeleton.onAddGeometry) {
+                    geometry.skeleton.onAddGeometry(this)
                 };
                 break;
             case 'entityBox':
@@ -158,6 +413,10 @@ export class Room {
             this.rays = [];
             this.points = [];
 
+            const partitionRamps = [];
+            const partitionEntityBoxes = [];
+            // const partition
+
             for (const circle of this.circles) {
                 circle.collision = false;
 
@@ -193,7 +452,12 @@ export class Room {
                 entityBox.updatePos(dt);
 
                 entityBox.resetCollisions(dt);
+
+                // if (Math.round(entityBox.x) != Math.round(entityBox.lastX) || Math.round(entityBox.y) != Math.round(entityBox.lastY)) entityBox.partitioned = false;
             };
+
+            // this.spatialGrid.partition();
+            // this.spatialGrid.parseCollisions(dt);
             const passes = 1;
             for (let p = 0; p < passes; p++) {
                 for (let i = 0; i < this.circles.length; i++) {
@@ -229,6 +493,7 @@ export class Room {
                         Physics.checkCircleRamp(dt, this.circles[j], this.ramps[i]);
                     };
                     for (let j = 0; j < this.entityBoxes.length; j++) {
+                        if (this.ramps[i].collisionCondition && !this.ramps[i].collisionCondition(this.entityBoxes[j])) continue;
                         Physics.checkEntityBoxRamp(dt, this.entityBoxes[j], this.ramps[i]);
                     };
                 };
@@ -245,9 +510,9 @@ export class Room {
                         // Physics.checkEntityBoxEntityBox(dt, this.entityBoxes[i], this.entityBoxes[j]);
 
                         if (Physics.checkBoxBox(this.entityBoxes[i], this.entityBoxes[j])) {
-                            if(this.entityBoxes[i].onCollision) { 
+                            if (this.entityBoxes[i].onCollision) {
                                 this.entityBoxes[i].onCollision(dt, this.entityBoxes[j]);
-                            } else if(this.entityBoxes[j].onCollision) { 
+                            } else if (this.entityBoxes[j].onCollision) {
                                 this.entityBoxes[j].onCollision(dt, this.entityBoxes[i]);
                             };
 
@@ -293,6 +558,7 @@ export class Room {
                     if (!this.water.instances[i].amount) continue;
                     const waterCollider = this.water.instances[i].getCollider();
                     if (!waterCollider) continue;
+                    if (this.entityBoxes[j].noWaterCollision) continue;
                     if (Physics.checkBoxBox(this.entityBoxes[j], waterCollider)) {
                         const dx = this.entityBoxes[j].x - this.entityBoxes[j].lastX;
                         const dy = this.entityBoxes[j].y - this.entityBoxes[j].lastY;
@@ -342,6 +608,7 @@ export class Room {
 
             for (const character of this.characters) {
                 character.update(dt);
+                if(character.AI) character.AI.update(dt);
             };
 
             // this.totalDt += dt;
@@ -434,7 +701,7 @@ export class Room {
         //     this.World.Game.Screen.renderSkeleton(character.skeleton);
         // };
         for (const character of this.characters) {
-            if (this.World.Game.MainCamera.checkBoxRender(character.skeleton.Controller)) {
+            if (this.World.Game.MainCamera.checkSkeletonRender(character.skeleton)) {
                 this.World.Game.Screen.renderSkeleton(character.skeleton, this.World.Game.Screen.cameraCtx);
                 this.World.Game.Screen.renderHp(character, this.World.Game.Screen.cameraCtx);
             };
@@ -446,6 +713,14 @@ export class Room {
             };
 
         };
+
+        // for (const column of this.spatialGrid.cells) {
+        //     for (const cell of column) {
+        //         // if (this.World.Game.MainCamera.checkBoxRender({ x: cell.Position.x, y: cell.Position.y, width: cell.width, height: cell.height })) {
+        //         this.World.Game.Screen.renderCell(this.World.Game.MainCamera.getCellImage(cell), this.World.Game.Screen.cameraCtx);
+        //         // };
+        //     };
+        // };
         // this.World.Game.Screen.renderWater(this.water);
         // for (const ray of this.rays) {
         //     this.World.Game.Screen.renderRay(ray);
@@ -459,6 +734,21 @@ export class Room {
     };
 
     gravity(entity) {
-        entity.ddy += this.gForce || gForce;
+        entity.ddy += entity.gForce || this.gForce || gForce;
     };
+
+    removeRamp(ramp) {
+        this.ramps = this.ramps.filter(({ id }) => id != ramp.id);
+        if (this.spatialGrid.Ramps[ramp.id]) {
+            delete this.spatialGrid.cells[this.spatialGrid.Ramps[ramp.id].gridX][this.spatialGrid.Ramps[ramp.id].gridY].Ramps[ramp.id];
+        };
+    };
+    removeEntityBox(entityBox) {
+        this.entityBoxes = this.entityBoxes.filter(({ id }) => id != entityBox.id);
+        if (this.spatialGrid.EntityBoxes[entityBox.id]) {
+            delete this.spatialGrid.cells[this.spatialGrid.EntityBoxes[entityBox.id].gridX][this.spatialGrid.EntityBoxes[entityBox.id].gridY].EntityBoxes[entityBox.id];
+        };
+    };
+    removeHitBox() { };
+    removeDoor() { };
 };

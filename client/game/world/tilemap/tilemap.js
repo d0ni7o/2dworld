@@ -202,7 +202,8 @@ export class Tile {
         if (this.collider) {
             const type = this.collider.constructor.name;
             if (type == 'Vector') {
-                this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.collider.id);
+                this.TileMap.room.removeRamp(this.collider);
+                // this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.collider.id);
             } else {
                 this.TileMap.room.boxes = this.TileMap.room.boxes.filter(box => box.id != this.collider.id);
             };
@@ -211,7 +212,8 @@ export class Tile {
         if (this.leftCollider) {
             const type = this.leftCollider.constructor.name;
             if (type == 'Vector') {
-                this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.leftCollider.id);
+                this.TileMap.room.removeRamp(this.leftCollider);
+                // this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.leftCollider.id);
             } else {
                 this.TileMap.room.boxes = this.TileMap.room.boxes.filter(box => box.id != this.leftCollider.id);
             };
@@ -220,7 +222,8 @@ export class Tile {
         if (this.topCollider) {
             const type = this.topCollider.constructor.name;
             if (type == 'Vector') {
-                this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.topCollider.id);
+                this.TileMap.room.removeRamp(this.topCollider);
+                // this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.topCollider.id);
             } else {
                 this.TileMap.room.boxes = this.TileMap.room.boxes.filter(box => box.id != this.topCollider.id);
             };
@@ -229,7 +232,8 @@ export class Tile {
         if (this.rightCollider) {
             const type = this.rightCollider.constructor.name;
             if (type == 'Vector') {
-                this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.rightCollider.id);
+                this.TileMap.room.removeRamp(this.rightCollider);
+                // this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.rightCollider.id);
             } else {
                 this.TileMap.room.boxes = this.TileMap.room.boxes.filter(box => box.id != this.rightCollider.id);
             };
@@ -238,7 +242,8 @@ export class Tile {
         if (this.bottomCollider) {
             const type = this.bottomCollider.constructor.name;
             if (type == 'Vector') {
-                this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.bottomCollider.id);
+                this.TileMap.room.removeRamp(this.bottomCollider);
+                // this.TileMap.room.ramps = this.TileMap.room.ramps.filter(ramp => ramp.id != this.bottomCollider.id);
             } else {
                 this.TileMap.room.boxes = this.TileMap.room.boxes.filter(box => box.id != this.bottomCollider.id);
             };

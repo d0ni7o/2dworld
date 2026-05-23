@@ -18,6 +18,8 @@ import { spawnItem } from "./game/entities/items/items.js";
 import { Campfire } from "./game/entities/characters/campfire/campfire.character.js";
 import { initializeInventorySkeletons } from "./game/animation/skeletons/inventories/inventory-skeletons.js";
 import { Tree } from "./game/entities/characters/tree/tree.character.js";
+import { FPS_MENU } from "./game/ui/fps_menu.js";
+import { RockPile } from "./game/entities/characters/rock/rock_pile.character.js";
 
 let pausePhysics = false;
 
@@ -155,6 +157,8 @@ let PlayerCharacter;
 let HumanInventory;
 let timeScale = 1;
 
+FPS_MENU.render = true;
+
 class Game {
     constructor() {
         World.Game = this;
@@ -165,12 +169,33 @@ class Game {
     update(dt = 0) {
         if (isLoading()) return;
         if (!itemsSpawned) {
+            itemsSpawned = true;
             for (const room of World.rooms) {
-                WorldGenerator.generate(room.TileMap, Math.floor(0 + 1 * (room.TileMap.map[0].length - 1) / 2));
+                WorldGenerator.generate(room.TileMap, Math.floor(0 + (1/4) * (room.TileMap.map[0].length - 1) / 2));
                 room.TileMap.optimizeColliders();
             };
 
-            itemsSpawned = true;
+            for (let x = 0; x < World.rooms[0].TileMap.map.length; x++) {
+                if (Math.random() >= 0.1) continue;
+                let surfaceTile;
+
+                const NewTree = new Tree(x * tileSize, 0);
+                NewTree.skeleton.calculateSize();
+
+                for (let y = 0; y < World.rooms[0].TileMap.map[x].length - Math.floor(((NewTree.skeleton.Controller.height) / 2) / tileSize); y++) {
+                    if (World.rooms[0].TileMap.map[x][y].imageIndex) {
+                        surfaceTile = World.rooms[0].TileMap.map[x][y];
+                        break;
+                    };
+                    if (World.rooms[0].TileMap.map[x][y].waterInstance.amount > 0) break;
+                };
+                if (surfaceTile) {
+                    NewTree.skeleton.Controller.x = surfaceTile.x * tileSize + tileSize / 2;
+                    NewTree.skeleton.Controller.y = surfaceTile.y * tileSize - tileSize / 2 - NewTree.skeleton.Controller.height / 2;
+                    World.rooms[0].addGeometry('character', NewTree);
+                }
+            };
+
 
             PlayerCharacter = new Human(100, 100, 4);
 
@@ -181,26 +206,31 @@ class Game {
             // World.rooms[0].addGeometry('character', new Human(400, 100, 2));
             // World.rooms[0].addGeometry('character', new Human(600, 100, 3));
 
-            for (let i = 0; i < 1; i++) {
-                spawnItem('Sword', 100, 100, this.Input.Player.entityBox.room);
-                spawnItem('Sword', 150, 100, this.Input.Player.entityBox.room);
-                spawnItem('Mask', 200, 100, this.Input.Player.entityBox.room);
-                spawnItem('Shirt', 250, 100, this.Input.Player.entityBox.room);
-                spawnItem('Helm', 300, 100, this.Input.Player.entityBox.room);
-                spawnItem('Gloves', 350, 100, this.Input.Player.entityBox.room);
-            };
+            // for (let i = 0; i < 1; i++) {
+            //     spawnItem('Sword', 100, 100, World.rooms[0]);
+            //     spawnItem('Sword', 150, 100, World.rooms[0]);
+            //     spawnItem('Mask', 200, 100, World.rooms[0]);
+            //     spawnItem('Shirt', 250, 100, World.rooms[0]);
+            //     spawnItem('Helm', 300, 100, World.rooms[0]);
+            //     spawnItem('Gloves', 350, 100, World.rooms[0]);
+            // };
 
 
-            for (let i = 0; i < 20; i++) {
-                spawnItem('Apple', randomInt(0, World.rooms[0].width), 0, this.Input.Player.entityBox.room);
-                spawnItem('Wood', randomInt(0, World.rooms[0].width), 0, this.Input.Player.entityBox.room);
+            for (let i = 0; i < 10; i++) {
+                // spawnItem('Apple', randomInt(0, World.rooms[0].width), 0, World.rooms[0]);
+                // spawnItem('Wood', randomInt(0, World.rooms[0].width), 0, World.rooms[0]);
                 World.rooms[0].addGeometry('character', new Rabbit(randomInt(0, World.rooms[0].width), 0, 2));
+                World.rooms[0].addGeometry('character', new RockPile(randomInt(0, World.rooms[0].width), 0, 2));
             };
-            
-            World.rooms[0].addGeometry('character', new Tree(randomInt(0, World.rooms[0].width), 100));
+
+            // for (let i = 0; i < World.rooms[0].width / (tileSize * 10); i++) {
+            //     World.rooms[0].addGeometry('character', new Tree(randomInt(0, World.rooms[0].width), 100));
+            // };
+
+            // World.rooms[0].addGeometry('character', new Tree(150, 100));
 
             World.rooms[0].addGeometry('character', new Chest(500, 100, 4));
-            World.rooms[0].addGeometry('character', new Campfire(600, 100, 2));
+            // World.rooms[0].addGeometry('character', new Campfire(600, 100, 2));
 
             World.rooms[0].addGeometry('character', PlayerCharacter);
         }
@@ -239,6 +269,9 @@ class Game {
         if (CRAFTING_MENU.render) Screen.renderCraftingMenu();
         Screen.renderHotbar();
         Screen.renderUnstackSlot();
+
+        if (FPS_MENU.render) Screen.renderFps();
+        this.Input.Mouse.clicked = false;
 
 
 
@@ -361,7 +394,11 @@ class Game {
         now *= 0.001; // convert to seconds
         this.deltaTime = now - this.then;
         this.then = now;
+        FPS_MENU.frames++;
+        FPS_MENU.dt = this.deltaTime;
+        FPS_MENU.totalDt += this.deltaTime;
         if (tabActive) this.update(Math.min(this.deltaTime, 1 / 60));
+        // if (tabActive) this.update(this.deltaTime);
         if (!this.isRunning) { return };
         requestAnimationFrame(this.loop.bind(this))
     };

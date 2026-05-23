@@ -61,6 +61,15 @@ export class Camera extends Box {
         }, this.Screen.cameraCtx);
     };
 
+    checkSkeletonRender(skeleton) {
+        return this.checkBoxRender({ 
+            x: skeleton.Controller.x, 
+            y: skeleton.Controller.y,
+            width: skeleton.renderSize.width,
+            height: skeleton.renderSize.height
+        });
+    };
+
 
     checkBoxRender(box) {
         // return true;
@@ -138,6 +147,19 @@ export class Camera extends Box {
         return {
             x: Math.floor(tile.x),
             y: Math.floor(tile.y),
+            Position: {
+                x: Math.floor(tile.Position.x - this.x + this.Screen.cameraView.width / 2),
+                y: Math.floor(tile.Position.y - this.y + this.Screen.cameraView.height / 2),
+            }
+        }
+    };
+
+    getCellImage(tile) {
+        return {
+            x: Math.floor(tile.x),
+            y: Math.floor(tile.y),
+            width: tile.width,
+            height: tile.height,
             Position: {
                 x: Math.floor(tile.Position.x - this.x + this.Screen.cameraView.width / 2),
                 y: Math.floor(tile.Position.y - this.y + this.Screen.cameraView.height / 2),

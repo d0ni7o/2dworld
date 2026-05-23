@@ -49,6 +49,10 @@ export class RabbitSkeleton extends Skeleton {
         this.Head = Head;
         this.Tail = Tail;
 
+        this.Head.mirrorX = true;
+        this.Torso.mirrorX = true;
+        this.Tail.mirrorX = true;
+
         this.renderIndex = [1, 2, 3];
         this.reverseRenderIndex = [1, 2, 3];
     };

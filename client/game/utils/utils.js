@@ -5,7 +5,7 @@ export const startLoading = (name) => { console.log(`START LOADING ${name}`); lo
 export const stopLoading = (name) => { console.log(`STOP LOADING ${name}`); loading-- };
 export const isLoading = () => loading > 0;
 export const randomEl = (array) => array[Math.floor(Math.random() * array.length)];
-export const randomInt = (max, min = 0) => Math.floor(Math.random() * (max - min)) + min;
+export const randomInt = (max, min = 0) => Math.floor(Math.random() * (max - min + 1)) + min;
 
 
 const spawnCircle = function (x, y, radius = minCircleSize + Math.floor(Math.random() * maxCircleSize)) {

@@ -33,8 +33,8 @@ export const WorldGenerator = {
             };
         });
 
-        // heightMap = heightMap.map(h => h + 4);
-        heightMap = heightMap.map(h => h * h * Math.sign(h));
+        heightMap = heightMap.map(h => h + 4);
+        // heightMap = heightMap.map(h => h * h * Math.sign(h));
         // heightMap = heightMap.map(h => Math.sqrt(Math.abs(h)) * Math.sign(h));
 
         for (let x = 0; x < tileMap.map.length; x++) {

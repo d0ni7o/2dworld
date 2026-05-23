@@ -4,7 +4,7 @@ import { HotbarInventory } from "../ui/hotbar.js";
 import { clamp } from "../utils/utils.js";
 import { tileSize, TileSets } from "../world/tilemap/tilemap.js";
 import { CRAFTING_MENU } from "../ui/crafting_menu.js";
-import { Recpies } from "../entities/recipes.js";
+import { Recipes } from "../entities/recipes.js";
 
 document.addEventListener('contextmenu', event => event.preventDefault());
 
@@ -175,7 +175,7 @@ export class Input {
             if(CRAFTING_MENU.render) {
                 CRAFTING_MENU.close();
             } else {
-                CRAFTING_MENU.open(Recpies.Campfire);
+                CRAFTING_MENU.open(Recipes.Campfire);
             };
         };
 
@@ -234,6 +234,7 @@ export class Input {
         };
     };
     handleTileInput(event) {
+        return;
         if (ITEM_INVENTORY.render || CONTEXT_MENU.render) return;
         const x = clamp(
             this.Mouse.worldX,

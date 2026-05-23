@@ -91,9 +91,14 @@ export class Character {
         this.inventory = new Inventory(this);
 
         this.Stats = {};
+        this.statNames = [];
     };
 
     update(dt) {
+        for(const statName of this.statNames) {
+            this.Stats[statName].tick(dt);
+        };
+
         this.craft(dt);
     };
 
@@ -140,7 +145,8 @@ export class Character {
 
     pickup(item) {
         if (this.inventory.add(item)) {
-            this.skeleton.Controller.room.entityBoxes = this.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != item.id);
+            // this.skeleton.Controller.room.entityBoxes = this.skeleton.Controller.room.entityBoxes.filter(({ id }) => id != item.id);
+            this.skeleton.Controller.room.removeEntityBox(item);
             return true;
         };
         return false;
@@ -184,7 +190,7 @@ export class Character {
         if (state) {
             if (this.skeleton.Controller.waterCollision) {
                 this.movingDown = true;
-                this.skeleton.Controller.dy += baseJumpForce / 50;
+                this.skeleton.Controller.dy += this.Stats.Jump.currentValue * baseJumpForce / 50;
             };
         } else {
             this.movingDown = false;
@@ -197,11 +203,11 @@ export class Character {
             if (!this.skeleton.Controller.jumping) {
                 this.Stats.Stamina.update(-10);
             };
-            this.skeleton.Controller.dy -= baseJumpForce;
+            this.skeleton.Controller.dy -= this.Stats.Jump.currentValue * baseJumpForce;
             this.skeleton.Controller.jumping = true;
         };
         if (this.skeleton.Controller.waterCollision) {
-            this.skeleton.Controller.dy -= baseJumpForce / 50;
+            this.skeleton.Controller.dy -= this.Stats.Jump.currentValue * baseJumpForce / 50;
         };
     };
 
@@ -227,10 +233,10 @@ export class Character {
     walk(state) {
         if (state) {
             this.walking = true;
-            this.Stats.MovementSpeed.currentValue = 0.5;
+            this.Stats.MovementSpeed.currentValue = this.Stats.MovementSpeed.max / 2;
         } else {
             this.walking = false;
-            this.Stats.MovementSpeed.currentValue = 1;
+            this.Stats.MovementSpeed.currentValue = this.Stats.MovementSpeed.max;
         };
     };
 
@@ -269,5 +275,8 @@ export class Character {
                 this.inventory.slots[i].item = null;
             };
         };
+
+        this.skeleton.Controller.room.characters = this.skeleton.Controller.room.characters.filter(char => char.id != this.id);
+        this.skeleton.Controller.room.entityBoxes = this.skeleton.Controller.room.entityBoxes.filter(box => box.id != this.skeleton.Controller.id);
     };
 };

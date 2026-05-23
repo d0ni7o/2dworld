@@ -14,6 +14,9 @@ export class HitBox extends Box {
 
         if (!this.targets.some(target => target.id == newTarget.id)) {
             this.targets.push(newTarget);
+            if (newTarget.onAttackCollision) {
+                newTarget.onAttackCollision(this.attack);
+            };
         };
         this.collision = true;
     };
@@ -67,18 +70,6 @@ export class EntityBox extends Box {
             };
         };
 
-        if (this.skeleton?.character?.Stats.Breath) {
-            if (!this.waterCollision) {
-                this.skeleton.character.Stats.Breath.update(10 * dt);
-            };
-
-            if (this.skeleton.character.isMoving()) {
-                this.skeleton.character.Stats.Stamina.update(-10 * dt);
-            } else {
-                this.skeleton.character.Stats.Stamina.update(60 * dt);
-            };
-        };
-
         if (this.y - this.lastY >= 0) {
             this.jumping = false;
         };
@@ -117,5 +108,7 @@ export class EntityBox extends Box {
         this.Right.collision = false;
 
         this.waterCollision = false;
+
+        this.oobCollision = false;
     };
 };

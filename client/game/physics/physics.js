@@ -610,17 +610,21 @@ export const Physics = {
         if (entityBox.x - entityBox.width / 2 < room.x - room.width / 2) {
             entityBox.x = room.x - room.width / 2 + entityBox.width / 2;
             entityBox.dx = 0;
+            entityBox.oobCollision = true;
         } else if (entityBox.x + entityBox.width / 2 > room.x + room.TileMap.maxX) {
             entityBox.x = room.x + room.TileMap.maxX - entityBox.width / 2;
             entityBox.dx = 0;
+            entityBox.oobCollision = true;
         };
         if (entityBox.y - entityBox.height / 2 < room.y - room.height / 2) {
             // entityBox.y = room.y - room.height / 2 + entityBox.height / 2;
             // entityBox.dy = 0;
+            entityBox.oobCollision = true;
         } else if (entityBox.y + entityBox.height / 2 > room.y + room.TileMap.maxY) {
             entityBox.y = room.y + room.TileMap.maxY - entityBox.height / 2;
             entityBox.dy = 0;
             entityBox.Floor.collision = true;
+            entityBox.oobCollision = true;
         };
     },
     // checkOOB(bone) {

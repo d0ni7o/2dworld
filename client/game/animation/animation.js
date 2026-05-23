@@ -244,6 +244,8 @@ export const AnimationSets = {
     Trunk: new AnimationSet('./assets/animations/Tree/trunk/trunk_0.png', 'Trunk'),
     Branch: new AnimationSet('./assets/animations/Tree/branch/branch_0.png', 'Branch'),
     Leaves: new AnimationSet('./assets/animations/Tree/leaves/leaves.png', 'Leaves'),
+    Rock: new AnimationSet('./assets/animations/Rock/base/rock.png', 'Rock'),
+    Spear: new AnimationSet('./assets/animations/Spear/base/spear.png', 'Spear'),
 };
 
 export const loadAnimationSets = async function () {

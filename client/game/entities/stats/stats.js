@@ -1,7 +1,7 @@
 import { clamp, randomInt } from "../../utils/utils.js";
 
 class Stat {
-    constructor(name, baseValue, statModifiers = [], min = 0, max = Infinity) {
+    constructor(name, baseValue, statModifiers = [], min = 0, max = Infinity, regenRate = 0) {
         this.name = name;
         this.min = min;
         this.baseMin = min;
@@ -10,10 +10,15 @@ class Stat {
         this.baseValue = baseValue;
         this.currentValue = baseValue;
         this.statModifiers = statModifiers;
+        this.regenRate = regenRate;
     };
 
     onChange() {
 
+    };
+
+    tick(dt) {
+        this.update(this.max * this.regenRate * dt);
     };
 
     update(dStat, dt = 0) {
@@ -70,7 +75,7 @@ class HpStat extends Stat {
     };
 
     onChange() {
-        if(this.currentValue <= 0) {
+        if (this.currentValue <= 0) {
             this.character.die();
         };
     };
@@ -78,7 +83,7 @@ class HpStat extends Stat {
 
 class BreathStat extends Stat {
     constructor(character) {
-        super('Breath', 100, [], 0, 100)
+        super('Breath', 100, [], 0, 100, 1 / 10);
 
         this.character = character;
         this.character.Stats.Breath = this;
@@ -88,9 +93,17 @@ class BreathStat extends Stat {
     };
 
     onChange(dt = 0) {
-        if(this.currentValue <= 0) {
+        if (this.currentValue <= 0) {
             this.character.Stats.Hp.update(-10 * dt)
-        };  
+        };
+    };
+
+    tick(dt) {
+        if (!this.character.skeleton.Controller.waterCollision) return;
+        super.tick(dt);
+        //     if (!this.waterCollision) {
+        //         this.skeleton.character.Stats.Breath.update(10 * dt);
+        //     };
     };
 };
 
@@ -124,7 +137,7 @@ class DefenseStat extends Stat {
 
 class HungerStat extends Stat {
     constructor(character) {
-        super('Hunger', 100, [], 0, 100);
+        super('Hunger', 100, [], 0, 100, -1 / 120);
 
         this.character = character;
         this.character.Stats.Hunger = this;
@@ -134,15 +147,15 @@ class HungerStat extends Stat {
     };
 
     onChange() {
-        if(this.currentValue <= 0) {
-            // console.log(`CHARACTER ${this.character.id} DEAD!!!`);
+        if (this.currentValue <= 0) {
+            this.character.die();
         };
     };
 };
 
 class StaminaStat extends Stat {
     constructor(character) {
-        super('Stamina', 100, [], 0, 100);
+        super('Stamina', 100, [], 0, 100, 0.5);
 
         this.character = character;
         this.character.Stats.Stamina = this;
@@ -151,8 +164,22 @@ class StaminaStat extends Stat {
         this.color2 = 'rgba(0, 255, 0, 0.25)';
     };
 
+    tick(dt) {
+        if (this.character.isMoving()) {
+            this.update(-10 * dt);
+        } else {
+            super.tick(dt);
+        };
+
+        //     if (this.skeleton.character.isMoving()) {
+        //         this.skeleton.character.Stats.Stamina.update(-10 * dt);
+        //     } else {
+        //         this.skeleton.character.Stats.Stamina.update(60 * dt);
+        //     };
+    };
+
     onChange() {
-        if(this.currentValue <= 0) {
+        if (this.currentValue <= 0) {
             this.character.Stats.MovementSpeed.currentValue = 0.25;
         } else {
             this.character.Stats.MovementSpeed.currentValue = this.character.walking ? 0.5 : 1;
@@ -169,6 +196,15 @@ class MovementSpeedStat extends Stat {
     };
 };
 
+class JumpStat extends Stat {
+    constructor(character) {
+        super('Jump', 1, [], 0, 1);
+
+        this.character = character;
+        this.character.Stats.Jump = this;
+    }
+}
+
 export class CharacterStats {
     constructor(character, baseStats, statModifiers) {
         new HpStat(character);
@@ -177,13 +213,16 @@ export class CharacterStats {
         new StaminaStat(character);
         new BreathStat(character);
         new MovementSpeedStat(character);
+        new JumpStat(character);
 
 
         new DamageStat(character);
         new DefenseStat(character);
+
+        character.statNames = Object.keys(character.Stats);
     };
 };
 
-class ItemStats {};
+class ItemStats { };
 
-class StatModifier {};
+class StatModifier { };

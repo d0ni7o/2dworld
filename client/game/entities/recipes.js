@@ -1,9 +1,11 @@
 import { AnimationSets } from "../animation/animation.js";
 import { Campfire } from "./characters/campfire/campfire.character.js";
 import { Inventory } from "./characters/character.js";
+import { spawnItem } from "./items/items.js";
 
 export class Recipe {
     constructor(name, builder, input, output, init = {}) {
+        this.name = name;
         this.input = input;
         this.output = output;
 
@@ -28,6 +30,7 @@ export class Recipe {
     };
 };
 
-export const Recpies = {
+export const Recipes = {
     Campfire: new Recipe('Campfire', (x, y) => new Campfire(x, y).skeleton.Controller, ['Wood', 'Wood'], ['Campfire']),
+    Spear: new Recipe('Spear', (x, y) => spawnItem('Spear', x, y), ['Rock', 'Wood', 'Wood'], ['Spear'])
 };

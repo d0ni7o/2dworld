@@ -123,6 +123,7 @@ export class Punch extends Attack {
         this.Owner.unRotate();
         if (this.frame < (7 * this.durationFrames / 10)) {
             // this.Owner.rescale(this.Owner.root.skeleton.ogScale + this.animationT * 4);
+            this.Owner.physOffsetX -= this.Owner.dirX * dt * this.Owner.width;
             this.Owner.rotate(Math.PI / 2);
             for (let i = 0; i < this.hitboxes.length; i++) {
                 this.hitboxes[i].box.x = -2;
@@ -132,12 +133,11 @@ export class Punch extends Attack {
                 this.hitboxes[i].box.updateGeometry();
             };
             // if (this.frame > (6 * this.durationFrames / 10)) {
-            this.Owner.offsetX -= this.Owner.dirX * dt * this.Owner.width;
             // };
         } else if (this.frame < (9 * this.durationFrames / 10)) {
             // this.Owner.rescale(this.Owner.root.skeleton.ogScale + this.animationT * 4);
+            this.Owner.physOffsetX += this.Owner.dirX * dt * this.Owner.height * 7;
             this.Owner.rotate(Math.PI / 2);
-            this.Owner.offsetX += this.Owner.dirX * dt * this.Owner.height * 7;
             // this.Owner.offsetY += this.Owner.dirX * dt * this.Owner.height * 8;
             for (let i = 0; i < this.hitboxes.length; i++) {
                 this.hitboxes[i].box.width = this.Owner.parent.skeleton.Controller.width / 2;
@@ -158,10 +158,18 @@ export class Punch extends Attack {
             };
         };
 
+        this.Owner.updateGeometry();
         this.animationT += dt;
     }
 
     onStart(dt) {
+        this.drainStamina = true;
+        if (this.Owner.parent.skeleton.character.Stats.Stamina.currentValue < 20) {
+            this.frame = this.durationFrames;
+            this.drainStamina = false;
+            return;
+        };
+
         this.Owner.attacking = true;
         this.Owner.animationT = 0;
         this.Owner.unRotate();
@@ -174,14 +182,14 @@ export class Punch extends Attack {
         this.Owner.unRotate();
         this.Owner.updateGeometry();
         this.Owner.skeleton.resetAnimationTime();
-        this.Owner.offsetX = 0;
-        this.Owner.offsetY = 0;
+        this.Owner.physOffsetX = 0;
+        if (this.drainStamina) this.Owner.parent.skeleton.character.Stats.Stamina.update(-20);
     }
 
     onCollision(dt, entityBox, hitBox) {
         if (!entityBox.skeleton?.character?.Stats?.Hp || entityBox.skeleton?.Controller.id == this.Owner.skeleton.Controller.id) return;
         if (hitBox.targets.some(({ id }) => id == entityBox.id)) return;
-        entityBox.skeleton.character.Stats.Hp.update(-10);
+        entityBox.skeleton.character.Stats.Hp.update(-1);
     }
 };
 
@@ -276,7 +284,7 @@ export class SwordAttack extends Attack {
         this.Owner.parent.physOffsetY = 0;
         this.Owner.physOffsetX = 0;
         this.Owner.physOffsetY = 0;
-        if(this.drainStamina) this.Owner.parent.skeleton.character.Stats.Stamina.update(-50);
+        if (this.drainStamina) this.Owner.parent.skeleton.character.Stats.Stamina.update(-50);
     }
 
     onCollision(dt, entityBox, hitBox) {

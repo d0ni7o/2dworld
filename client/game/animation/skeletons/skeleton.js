@@ -99,6 +99,11 @@ export class Bone extends EntityBox {
             const cx = this.parent.x;
             const cy = this.parent.y;
 
+            if (this.mirrorX && this.parent && this.parent.id != this.root.id) {
+                this.parentX = this.initParent.parentX * this.dirX;
+                this.childX = this.initParent.childX * this.dirX;
+            };
+
             // const px = this.parent.x + this.physOffsetX + this.parent.offsetX + (this.parentX * this.parent.width + this.childX * this.width);
             // const py = this.parent.y + this.physOffsetY + this.parent.offsetY + (this.parentY * this.parent.height + this.childY * this.height);
             const px = this.parent.x + this.physOffsetX + (this.parentX * this.parent.width + this.childX * this.width);
@@ -339,12 +344,43 @@ export class Skeleton {
 
         this.bones[0].children[0].parentX = (this.bones[0].children[0].x - minX - this.bones[0].width / 2) / this.bones[0].width;
         this.bones[0].children[0].parentY = (this.bones[0].children[0].y - minY - this.bones[0].height / 2) / this.bones[0].height;
+
+        this.renderSize = this.getRenderSize();
     };
 
-    removeBone(index) {
+    getRenderSize() {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        for (let i = 1; i < this.bones.length; i++) {
+            if (this.bones[i].AB.p0.x < minX) {
+                minX = this.bones[i].AB.p0.x;
+            };
+            if (this.bones[i].AB.p.x > maxX) {
+                maxX = this.bones[i].AB.p.x;
+            };
+            if (this.bones[i].BC.p0.y < minY) {
+                minY = this.bones[i].BC.p0.y;
+            };
+            if (this.bones[i].BC.p.y > maxY) {
+                maxY = this.bones[i].BC.p.y;
+            };
+        };
+        return { 
+            width: maxX - minX, 
+            height: maxY - minY 
+        };
+    };
+
+    removeBone(index, bone) {
         this.bones.splice(index, 1);
         this.renderIndex = this.renderIndex.filter(i => i != index).map(i => i < index ? i : (i - 1));
         this.reverseRenderIndex = this.reverseRenderIndex.filter(i => i != index).map(i => i < index ? i : (i - 1));
+
+        if(bone && bone.parent) {
+            bone.parent.children = bone.parent.children.filter(({ id }) => id != bone.id);
+        };
     };
 
     rescale(newScale) { };

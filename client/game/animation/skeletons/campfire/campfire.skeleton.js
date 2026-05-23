@@ -133,6 +133,7 @@ export class CampfireSkeleton extends Skeleton {
                                 if (!Campfire.open && ITEM_INVENTORY.render) {
                                     ITEM_INVENTORY.close();
                                 };
+                                /** ENTITY POOL */
                                 skeleton.Controller.room.characters = skeleton.Controller.room.characters.filter(({ id }) => id != Controller.skeleton.character.id);
                             };
                         }
